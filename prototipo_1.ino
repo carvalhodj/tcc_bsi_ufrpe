@@ -102,10 +102,6 @@ void loop()
     blink_led();
     modo_telemetria();
   }
-  else
-  {
-    led_on();
-  }
 }
 
 void modo_telemetria()
@@ -182,7 +178,10 @@ void led_on()
   }
   
   if (servidor_ftp)
+  {
     servidor_ftp = false;
+    WiFi.disconnect(true);
+  }
 }
 
 void handle_event(AceButton* /* button */, uint8_t eventType, uint8_t buttonState)
@@ -198,12 +197,12 @@ void handle_event(AceButton* /* button */, uint8_t eventType, uint8_t buttonStat
   {
     case AceButton::kEventClicked:
       telemetria = false;
+      led_on();
       Alarm.enable(alarm_id_sensor);
       break;
     case AceButton::kEventLongPressed:
       telemetria = true;
       Alarm.disable(alarm_id_sensor);
-//      modo_telemetria();
       break;
   }
 }
