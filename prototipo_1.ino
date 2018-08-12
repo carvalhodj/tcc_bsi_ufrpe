@@ -37,6 +37,8 @@ AlarmId alarm_id_sensor;
 
 void modo_telemetria();
 void modo_sensor();
+void blink_led();
+void led_on();
 void handle_event(AceButton*, uint8_t, uint8_t);
 
 void setup() {
@@ -97,34 +99,19 @@ void loop()
   button.check();
   if (telemetria)
   {
-    unsigned long current_millis = millis();
-    if(current_millis - previous_millis >= interval)
-    {
-      previous_millis = current_millis;   
-      if (led_state == LOW)
-        led_state = HIGH;  // Note that this switches the LED *off*
-      else
-        led_state = LOW;   // Note that this switches the LED *on*
-      digitalWrite(LED_POWER, led_state);
-    }
+    blink_led();
+    modo_telemetria();
   }
   else
   {
-    if (!led_state)
-    {
-      led_state = HIGH;
-      digitalWrite(LED_POWER, led_state);
-    }
-
-    if (servidor_ftp)
-      servidor_ftp = false;
+    led_on();
   }
 }
 
 void modo_telemetria()
 {
   // Desabilitando as chamadas da função de escrita no arquivo
-  Alarm.disable(alarm_id_sensor);
+  
   // Inicializando o servidor FTP
   if (!servidor_ftp)
   {
@@ -172,6 +159,32 @@ void modo_sensor()
   Serial.println(I);
 }
 
+void blink_led()
+{
+  unsigned long current_millis = millis();
+  if(current_millis - previous_millis >= interval)
+  {
+    previous_millis = current_millis;   
+    if (led_state == LOW)
+    led_state = HIGH;  // Note that this switches the LED *off*
+    else
+    led_state = LOW;   // Note that this switches the LED *on*
+    digitalWrite(LED_POWER, led_state);
+  }
+}
+
+void led_on()
+{
+  if (!led_state)
+  {
+    led_state = HIGH;
+    digitalWrite(LED_POWER, led_state);
+  }
+  
+  if (servidor_ftp)
+    servidor_ftp = false;
+}
+
 void handle_event(AceButton* /* button */, uint8_t eventType, uint8_t buttonState)
 {
 
@@ -185,11 +198,12 @@ void handle_event(AceButton* /* button */, uint8_t eventType, uint8_t buttonStat
   {
     case AceButton::kEventClicked:
       telemetria = false;
-      modo_sensor();
+      Alarm.enable(alarm_id_sensor);
       break;
     case AceButton::kEventLongPressed:
       telemetria = true;
-      modo_telemetria();
+      Alarm.disable(alarm_id_sensor);
+//      modo_telemetria();
       break;
   }
 }
