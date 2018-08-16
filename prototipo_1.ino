@@ -1,23 +1,21 @@
+#include <RTClib.h>
 #include <Wire.h>
-#include <DS1307RTC.h>
-#include <Time.h>
-#include <TimeLib.h>
-#include <TimeAlarms.h>
 #include <AceButton.h>
 #include <AdjustableButtonConfig.h>
 #include <ButtonConfig.h>
 #include "ACS712.h"
+#include "SimpleTimer.h"
 #include <ESP8266WiFi.h>
 #include "ESP8266FtpServer.h"
 
-#define LED_POWER   D3
-#define BUTTON_PIN  D5
+#define LED_POWER   D6
+#define BUTTON_PIN  D7
 
 using namespace ace_button;
 
+RTC_DS1307 rtc;
+SimpleTimer timer;
 ACS712 sensor(ACS712_30A, A0);
-//DS1307 rtc(D2, D1);
-tmElements_t tm;
 FtpServer ftp_srv;
 AceButton button(BUTTON_PIN);
 
@@ -28,12 +26,13 @@ const char *ftp_password      = "juawms";
 const double V                = 220;
 const double treshold         = 1.0;
 bool ligado                   = false;
-bool telemetria               = false;
+//bool telemetria               = false;
 bool servidor_ftp             = false;
 int led_state                 = HIGH;
 unsigned int interval         = 1000;
 unsigned int previous_millis  = 0;
-AlarmId alarm_id_sensor;
+int timerId;
+int timerId2;
 
 void modo_telemetria();
 void modo_sensor();
@@ -43,80 +42,61 @@ void handle_event(AceButton*, uint8_t, uint8_t);
 
 void setup() {
     pinMode(LED_POWER, OUTPUT);
+    pinMode(BUTTON_PIN, INPUT_PULLUP);
     digitalWrite(LED_POWER, led_state);
     
-    pinMode(BUTTON_PIN, INPUT_PULLUP);
-
     ButtonConfig* button_config = button.getButtonConfig();
     button_config->setEventHandler(handle_event);
     button_config->setFeature(ButtonConfig::kFeatureClick);
     button_config->setFeature(ButtonConfig::kFeatureLongPress);
 
-    bool parse = false;
-    bool config = false;
+   WiFi.mode(WIFI_AP);//Define o ESP8266 como Acess Point.
+   WiFi.softAP(ssid, password);//Cria um WiFi de nome "NodeMCU" e sem senha.
 
-// get the date and time the compiler was run
-//    if (getDate(__DATE__) && getTime(__TIME__)) 
-//    {
-//      parse = true;
-//      // and configure the RTC with this info
-//      if (RTC.write(tm))
-//      {
-//        config = true;
-//      }
-//    }
+  rtc.begin();
+  // Setar no RTC a hora que este sketch foi compilado
+   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   
-    Serial.begin(115200);
-    //while (!Serial) ; // wait for Arduino Serial Monitor
-    //delay(200);
-    if (parse && config) 
-    {
-      Serial.print("DS1307 configured Time=");
-      Serial.print(__TIME__);
-      Serial.print(", Date=");
-      Serial.println(__DATE__);
-    }
-
     if (SPIFFS.begin())
     {
-      Serial.println("SPIFFS opened!");
-//    SPIFFS.format();
-      ftp_srv.begin(ftp_user, ftp_password);
-      File f = SPIFFS.open("/coleta.csv", "a");
-      f.println("<<< SISTEMA INICIADO >>>");
-      f.close();
+//        SPIFFS.format();
+//        ftp_srv.begin(ftp_user, ftp_password);
+        File f = SPIFFS.open("/coleta.csv", "a");
+        f.println("<<< SISTEMA INICIADO >>>");
+        f.close();
     }
-    
+//    
     Serial.println("Aguarde. Calibrando...");
     sensor.calibrate();
     Serial.println("Fim da calibração");
 
-    alarm_id_sensor = Alarm.timerRepeat(1, modo_sensor);
+    timerId = timer.setInterval(1000, modo_sensor);
+    timerId2 = timer.setInterval(1000, modo_telemetria);
+    timer.disable(timerId2);
 }
 
 void loop() 
 {
   button.check();
-  if (telemetria)
-  {
-    blink_led();
-    modo_telemetria();
-  }
+  timer.run();
+  if (servidor_ftp)
+    ftp_srv.handleFTP();
 }
 
 void modo_telemetria()
 {
-  // Desabilitando as chamadas da função de escrita no arquivo
-  
+//  if (WiFi.status() != WL_CONNECTED)
+//  {
+//    WiFi.begin(ssid, password);
+//    delay(2000);
+//  }
   // Inicializando o servidor FTP
   if (!servidor_ftp)
   {
     ftp_srv.begin(ftp_user, ftp_password);
     servidor_ftp = true; 
   }
-  ftp_srv.handleFTP();
-  if (WiFi.status() != WL_CONNECTED)
-    WiFi.begin(ssid, password); 
+  blink_led();
 }
 
 void modo_sensor()
@@ -125,34 +105,49 @@ void modo_sensor()
   if (I > treshold && !ligado)
   {
     // Formato: TIMESTAMP,<ON/OFF>,CORRENTE(A)
+    DateTime now = rtc.now();
     File f = SPIFFS.open("/coleta.csv", "a");
-//    f.print(rtc.getTimeStr());
-//    f.print(",");
-//    f.print(rtc.getDateStr(FORMAT_SHORT));
+    f.print(now.year(), DEC);
+    f.print("-");
+    f.print(now.month(), DEC);
+    f.print("-");
+    f.print(now.day(), DEC);
+    f.print(" ");
+    f.print(now.hour(), DEC);
+    f.print(":");
+    f.print(now.minute(), DEC);
+    f.print(":");
+    f.print(now.second(), DEC);
     f.print(",");
     f.print("1");
     f.print(",");
     f.println(I);
     f.close();
     ligado = true;
-    Serial.println(String("Corrente = ") + I + " A");
   }
   else if (I < treshold && ligado)
   {
+    DateTime now = rtc.now();
     File f = SPIFFS.open("/coleta.csv", "a");
-//    f.print(rtc.getTimeStr());
-//    f.print(",");
-//    f.print(rtc.getDateStr(FORMAT_SHORT));
+    f.print(now.year(), DEC);
+    f.print("-");
+    f.print(now.month(), DEC);
+    f.print("-");
+    f.print(now.day(), DEC);
+    f.print(" ");
+    f.print(now.hour(), DEC);
+    f.print(":");
+    f.print(now.minute(), DEC);
+    f.print(":");
+    f.print(now.second(), DEC);
     f.print(",");
     f.print("0");
     f.print(",");
     f.println(I);
     f.close();
     ligado = false;
-    Serial.println(String("Corrente = ") + I + " A");
   }
-  Serial.print("Corrente (A): ");
-  Serial.println(I);
+  led_on();
 }
 
 void blink_led()
@@ -162,9 +157,9 @@ void blink_led()
   {
     previous_millis = current_millis;   
     if (led_state == LOW)
-    led_state = HIGH;  // Note that this switches the LED *off*
+      led_state = HIGH;  // Note that this switches the LED *off*
     else
-    led_state = LOW;   // Note that this switches the LED *on*
+      led_state = LOW;   // Note that this switches the LED *on*
     digitalWrite(LED_POWER, led_state);
   }
 }
@@ -180,29 +175,21 @@ void led_on()
   if (servidor_ftp)
   {
     servidor_ftp = false;
-    WiFi.disconnect(true);
+//    WiFi.disconnect(true);
   }
 }
 
 void handle_event(AceButton* /* button */, uint8_t eventType, uint8_t buttonState)
 {
-
-  // Print out a message for all events.
-  Serial.print(F("handleEvent(): eventType: "));
-  Serial.print(eventType);
-  Serial.print(F("; buttonState: "));
-  Serial.println(buttonState);
-
   switch (eventType)
   {
     case AceButton::kEventClicked:
-      telemetria = false;
-      led_on();
-      Alarm.enable(alarm_id_sensor);
+      timer.enable(timerId);
+      timer.disable(timerId2);
       break;
     case AceButton::kEventLongPressed:
-      telemetria = true;
-      Alarm.disable(alarm_id_sensor);
+      timer.enable(timerId2);
+      timer.disable(timerId);
       break;
   }
 }
