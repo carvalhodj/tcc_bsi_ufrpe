@@ -1,4 +1,6 @@
-media_por_casa <- function(arquivo_csv) {
+setwd("DEBS/")
+
+media_por_casa <- function(arquivo_csv, nome_diretorio) {
     # Lendo o CSV base, desconsiderando os titulo das colunas, pois nao ha
     dados_lidos <- read.csv(arquivo_csv, header=FALSE)
     # Coletando os valores presentes na coluna de vizinhanca sem duplicidade, retornando um vetor
@@ -18,7 +20,7 @@ media_por_casa <- function(arquivo_csv) {
             # Criando uma coluna de nome 'Media', armazenando o valor da media
             dados_house_household$Media <- media
             # Criando um diretorio para armazenar o subdataframe da casa
-            dir.create("casas_por_vizinhanca", showWarnings=FALSE)
+            dir.create(nome_diretorio, showWarnings=FALSE)
             # Criando um nome para o arquivo csv a ser gerado, contendo o id da vizinhanca seguido pelo id da casa
             name <- paste("casas_por_vizinhanca/dados_", i, "_", j)
             # Escrevendo no arquivo csv os dados
@@ -27,4 +29,4 @@ media_por_casa <- function(arquivo_csv) {
     }
 }
 
-media_por_casa("sorted_filtered_50mi.csv")
+media_por_casa("sorted_filtered_50mi.csv", "casa_por_vizinhanca")
