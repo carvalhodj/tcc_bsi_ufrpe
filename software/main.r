@@ -22,7 +22,7 @@ media_por_casa <- function(arquivo_csv, nome_diretorio) {
             # Criando um diretorio para armazenar o subdataframe da casa
             dir.create(nome_diretorio, showWarnings=FALSE)
             # Criando um nome para o arquivo csv a ser gerado, contendo o id da vizinhanca seguido pelo id da casa
-            name <- paste("casas_por_vizinhanca/dados_", i, "_", j)
+            name <- paste(nome_diretorio, "/", "dados_", i, "_", j, sep = "")
             # Escrevendo no arquivo csv os dados
             write.csv(dados_house_household, name)
         }
