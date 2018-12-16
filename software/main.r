@@ -53,5 +53,8 @@ mns <- function(m) {
 dados <- read.csv("sorted_tempo.csv")
 dt <- data.table(dados)
 dt[ , Date:= as.Date( tempo ) ]
-#  Get last row of each group
-dt[ , .SD[.N] ,  by = c("Date") ]
+# Pega a última linha de cada dia
+x <- dt[ , .SD[.N] ,  by = c("Date") ]
+# Calcula a diferença do acumulado entre o dia atual e o anterior
+x[ , diff:= V2 - shift(V2)]
+x
