@@ -53,8 +53,19 @@ mns <- function(m) {
 dados <- read.csv("sorted_tempo.csv")
 dt <- data.table(dados)
 dt[ , Date:= as.Date( tempo ) ]
+dt$Teste <- difftime(dt$tempo, shift(dt$tempo), units="secs")
+head(dt)
+#dt[ , Teste:= as.difftime( tempo, shift(tempo), units="secs" )]
+##head(dt)
 # Pega a última linha de cada dia
-x <- dt[ , .SD[.N] ,  by = c("Date") ]
+##x <- dt[ , .SD[.N] ,  by = c("Date") ]
 # Calcula a diferença do acumulado entre o dia atual e o anterior
-x[ , diff:= V2 - shift(V2)]
-x
+##x[ , diff:= V2 - shift(V2)]
+
+
+#x
+#y <- dt[1, shift(tempo)]
+#y
+#x1 <- dt[1, tempo]
+#x2 <- dt[2, tempo]
+#difftime(x2, x1, units="secs")
