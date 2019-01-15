@@ -51,21 +51,12 @@ mns <- function(m) {
 # write.csv(dados, "sorted_tempo.csv")
 
 dados <- read.csv("sorted_tempo.csv")
-dt <- data.table(dados)
-dt[ , Date:= as.Date( tempo ) ]
-dt$Teste <- difftime(dt$tempo, shift(dt$tempo), units="secs")
-head(dt)
-#dt[ , Teste:= as.difftime( tempo, shift(tempo), units="secs" )]
-##head(dt)
-# Pega a última linha de cada dia
-##x <- dt[ , .SD[.N] ,  by = c("Date") ]
-# Calcula a diferença do acumulado entre o dia atual e o anterior
-##x[ , diff:= V2 - shift(V2)]
+dados$datetime <- as.POSIXct(as.numeric(as.character(dados$V1)),origin="1970-01-01",tz="GMT")
+dados$Datetime2 <- droplevels(cut(dados$datetime, breaks="hours"))
+agregado = aggregate(V2 ~ Datetime2, data=dados, FUN=function(x) x[length(x)]-x[1]) # https://blogs.ubc.ca/yiwang28/2017/05/04/my-r-learning-notes-quick-ways-to-aggregate-minutely-data-into-hourly-data/
+write.csv(agregado, "debs_consumo_agregado.csv")
 
-
-#x
-#y <- dt[1, shift(tempo)]
-#y
-#x1 <- dt[1, tempo]
-#x2 <- dt[2, tempo]
-#difftime(x2, x1, units="secs")
+#tms <- as.POSIXct(seq(0,3600*24*30,by=60*20),origin="2010-06-30") #criando vetor de tempos (no teu caso tu já tens)
+#a=data.frame(tms,seq(1,length(tms))) #criando data.frame com valores quaisquer
+#a$Datetime2 <- droplevels(cut(a$Datetime, breaks="hour"))  #isso aqui vai gerar uma nova coluna, sem os minutos e segundos
+#agregado = aggregate(volume ~ Datetime2, data=a, FUN=function(x) x[length(x)]-x[1])  #agrega os valores com mesma hora, mas usando uma função que subtrai o último do primeiro
