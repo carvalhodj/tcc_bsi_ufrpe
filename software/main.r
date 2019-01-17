@@ -1,6 +1,7 @@
 library(anytime)
 library(forecast)
 library(data.table)
+library(zoo)
 
 setwd("DEBS/")
 
@@ -34,29 +35,19 @@ setwd("DEBS/")
 #     }
 # }
 
-hrs <- function(u) {
- x <- u * 3600
- return(x)
-}
- 
-mns <- function(m) {
- x <- m * 60
- return(x)
-}
-
 # PRIMEIRA PARTE
 # dados <- read.csv("sorted_tempo.csv", header=FALSE)
 # dados$tempo <- anytime(dados$V1)
 # dados$tempo
 # write.csv(dados, "sorted_tempo.csv")
-
-dados <- read.csv("sorted_tempo.csv")
-dados$datetime <- as.POSIXct(as.numeric(as.character(dados$V1)),origin="1970-01-01",tz="GMT")
-dados$Datetime2 <- droplevels(cut(dados$datetime, breaks="hours"))
-agregado = aggregate(V2 ~ Datetime2, data=dados, FUN=function(x) x[length(x)]-x[1]) # https://blogs.ubc.ca/yiwang28/2017/05/04/my-r-learning-notes-quick-ways-to-aggregate-minutely-data-into-hourly-data/
-write.csv(agregado, "debs_consumo_agregado.csv")
-
-#tms <- as.POSIXct(seq(0,3600*24*30,by=60*20),origin="2010-06-30") #criando vetor de tempos (no teu caso tu já tens)
-#a=data.frame(tms,seq(1,length(tms))) #criando data.frame com valores quaisquer
-#a$Datetime2 <- droplevels(cut(a$Datetime, breaks="hour"))  #isso aqui vai gerar uma nova coluna, sem os minutos e segundos
-#agregado = aggregate(volume ~ Datetime2, data=a, FUN=function(x) x[length(x)]-x[1])  #agrega os valores com mesma hora, mas usando uma função que subtrai o último do primeiro
+# SEGUNDA PARTE
+# dados <- read.csv("sorted_tempo.csv")
+# dados$datetime <- as.POSIXct(as.numeric(as.character(dados$V1)),origin="1970-01-01",tz="GMT")
+# dados$Datetime2 <- droplevels(cut(dados$datetime, breaks="hours"))
+# agregado = aggregate(V2 ~ Datetime2, data=dados, FUN=function(x) x[length(x)]-x[1]) # https://blogs.ubc.ca/yiwang28/2017/05/04/my-r-learning-notes-quick-ways-to-aggregate-minutely-data-into-hourly-data/
+# write.csv(agregado, "debs_consumo_agregado.csv")
+# TERCEIRA PARTE
+dados <- read.csv("debs_consumo_agregado.csv")
+consumo <- read.zoo(file="debs_consumo_agregado.csv", sep=",", header=TRUE,
+                    index=2, tz="GMT", format="%Y-%m-%d %H:%M:%S")
+plot(consumo, xlab="tempo", ylab="Consumo", main="Teste")
