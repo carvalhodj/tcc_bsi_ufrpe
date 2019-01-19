@@ -2,38 +2,11 @@ library(anytime)
 library(forecast)
 library(data.table)
 library(zoo)
+library(xts)
+library(urca)
+library(tseries)
 
-setwd("DEBS/")
-
-# TODO - função com erros, refazer
-# media_por_casa <- function(arquivo_csv, nome_diretorio) {
-#     # Lendo o CSV base, desconsiderando os titulo das colunas, pois nao ha
-#     dados_lidos <- read.csv(arquivo_csv, header=FALSE)
-#     # Coletando os valores presentes na coluna de vizinhanca sem duplicidade, retornando um vetor
-#     household_ids <- unique(dados_lidos$V3)
-#     # Iterando entre as vizinhancas
-#     for (i in household_ids) {
-#         # Gerando um subdataframe a partir do dataframe original com apenas as casas da respectiva vizinhanca
-#         dados_por_household <- dados_lidos[which(dados_lidos$V3 == i), ]
-#         # Coletando os ids das casas da vizinhanca sem duplicidade, retornando um vetor
-#         houses_ids <- unique(dados_por_household$V4)
-#         # Iterando entre as casas da vizinhanca
-#         for (j in houses_ids) {
-#             # Gerando um subdataframe a partir do subdataframe gerado para a vizinhanca
-#             dados_house_household <- dados_por_household[which(dados_por_household$V4 == j), ]
-#             # Calculando a media de consumo da casa
-#             media <- mean(dados_house_household$V2)
-#             # Criando uma coluna de nome 'Media', armazenando o valor da media
-#             dados_house_household$Media <- media
-#             # Criando um diretorio para armazenar o subdataframe da casa
-#             dir.create(nome_diretorio, showWarnings=FALSE)
-#             # Criando um nome para o arquivo csv a ser gerado, contendo o id da vizinhanca seguido pelo id da casa
-#             name <- paste(nome_diretorio, "/", "dados_", i, "_", j, sep = "")
-#             # Escrevendo no arquivo csv os dados
-#             write.csv(dados_house_household, name)
-#         }
-#     }
-# }
+setwd("/home/d3jota/UFRPE/BSI/TCC/tcc_bsi_ufrpe/software/csv_files/")
 
 # PRIMEIRA PARTE
 # dados <- read.csv("sorted_tempo.csv", header=FALSE)
@@ -48,6 +21,21 @@ setwd("DEBS/")
 # write.csv(agregado, "debs_consumo_agregado.csv")
 # TERCEIRA PARTE
 dados <- read.csv("debs_consumo_agregado.csv")
-consumo <- read.zoo(file="debs_consumo_agregado.csv", sep=",", header=TRUE,
-                    index=2, tz="GMT", format="%Y-%m-%d %H:%M:%S")
-plot(consumo, xlab="tempo", ylab="Consumo", main="Teste")
+#consumo <- read.zoo(file="debs_consumo_agregado.csv", sep=",", header=TRUE,
+#                    index=2, tz="GMT", format="%Y-%m-%d %H:%M:%S")
+idx <- as.Date(dados$Datetime2)
+dados$datetime <- idx
+x <- ts(dados$V2, frequency=24)
+y <- decompose(x)
+# Teste para verificar se a serie é estacionaria
+z <- summary(ur.kpss(x))
+# Tratamento necessário para realizar o forecast
+a <- na.remove(x)
+# Realizando uma previsão com método escolhido automagicamente e uma janela de 10 previsões
+fore <- forecast(a, h=10)
+fore
+# gráfico de autocorrelação
+plot(acf(a))
+# Realizando os testes para verificar qual melhor ARIMA a ser aplicado
+autoarima <- auto.arima(a, trace=TRUE)
+autoarima
