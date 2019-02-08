@@ -1,10 +1,8 @@
 library(anytime)
 library(forecast)
-#library(data.table)
-#library(zoo)
-#library(xts)
 library(urca)
 library(tseries)
+library(MLmetrics)
 
 setwd("/home/d3jota/UFRPE/BSI/TCC/tcc_bsi_ufrpe/software/csv_files/")
 
@@ -20,7 +18,7 @@ setwd("/home/d3jota/UFRPE/BSI/TCC/tcc_bsi_ufrpe/software/csv_files/")
 # agregado = aggregate(V2 ~ Datetime2, data=dados, FUN=function(x) x[length(x)]-x[1]) # https://blogs.ubc.ca/yiwang28/2017/05/04/my-r-learning-notes-quick-ways-to-aggregate-minutely-data-into-hourly-data/
 # write.csv(agregado, "debs_consumo_agregado.csv")
 ## TERCEIRA PARTE
-dados <- read.csv("debs_consumo_agregado.csv")
+dados <- read.csv("debs_consumo_agregado_noz.csv")
 
 ## Criando uma nova coluna de objetos 'Date', convertendo da coluna
 ## preexistente de datas, que estao no formato string
@@ -43,7 +41,7 @@ dados.teste.estacionariedade <- summary(ur.kpss(diff(dados.ts)))
 dados.ts.na.removed <- na.remove(dados.ts)
 
 ## Holt-Winters
-ajuste.holt <- HoltWinters(dados.ts.na.removed, gamma = FALSE)
+ajuste.holt <- HoltWinters(dados.ts.na.removed)
 plot(dados.ts.na.removed, xlab = 'tempo', ylab = 'Valores Observados/Ajustados', main = '')
 lines(fitted(ajuste.holt)[,1], lwd = 2, col = 'red')
 legend(0, 20, c("Consumo", "Ajuste"), lwd = c(1, 2), col = c("black", "red"), bty = 'n')
@@ -57,8 +55,34 @@ dados.fore <- forecast(dados.ts.na.removed, h=10)
 dados.fore
 
 ## gráfico de autocorrelação
-plot(acf(a))
+plot(acf(dados.ts.na.removed))
+
+## Dataframe de teste
+dados.test <- tail(dados.ts.na.removed, n = 7)
+
+## Dataframe de treino
+dados.train <- head(dados.ts.na.removed, n = (length(dados.ts.na.removed) - 7))
+
+## Dataframe de predições
+df.pred <- data.frame(pred = numeric(0))
+
+## Ajustar o train para ser usado no loop
+history <- data.frame(pred = numeric(0))
+
+for (i in dados.train) {
+  history <- rbind(history, i)
+}
+
+for (i in dados.test) {
+  model_fit <- arima(history, c(1, 0, 0))
+  output <- forecast(model_fit, h = 1)
+  df.pred <- rbind(df.pred, c(output$mean[1]))
+  history <- rbind(history, i)
+  print(sprintf("predicted: %s <> expected: %s", output$mean[1], i))
+}
+
+MSE(df.pred$X0.0306351443186633, dados.test)
 
 ## Realizando os testes para verificar qual melhor ARIMA a ser aplicado
-autoarima <- auto.arima(a, trace=TRUE)
+autoarima <- auto.arima(dados.ts.na.removed, trace=TRUE)
 autoarima
