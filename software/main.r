@@ -57,6 +57,48 @@ dados.fore
 ## gráfico de autocorrelação
 plot(acf(dados.ts.na.removed))
 
+## Realizando o cálculo do erro médio quadrático de cada configuração
+verificar_arimas <- function(x, orig_df) {
+  configuracao <- c(x[1], x[2], x[3])
+  ## Dataframe de teste
+  dados.test <- tail(orig_df, n = 7)
+  
+  ## Dataframe de treino
+  dados.train <- head(orig_df, n = (length(orig_df) - 7))
+  
+  ## Dataframe de predições
+  df.pred <- data.frame(pred = numeric(0))
+  
+  ## Ajustar o train para ser usado no loop
+  history <- data.frame(pred = numeric(0))
+  
+  for (i in dados.train) {
+    history <- rbind(history, i)
+  }
+  
+  for (i in dados.test) {
+    #model_fit <- arima(history, c(1, 0, 0))
+    model_fit <- arima(history, configuracao)
+    output <- forecast(model_fit, h = 1)
+    df.pred <- rbind(df.pred, c(output$mean[1]))
+    history <- rbind(history, i)
+    print(x)
+    print(sprintf("predicted: %s <> expected: %s", output$mean[1], i))
+  }
+  print("### calculo do erro ###")
+  print(MSE(df.pred[, 1], dados.test))
+}
+
+## Criar lista de vetores a serem usados como parametro no arima()
+config_list <- matrix(
+  c(0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 1),
+  nrow = 7,
+  ncol = 3,
+  byrow = TRUE
+)
+
+apply(config_list, 1, verificar_arimas, orig_df = dados.ts.na.removed)
+
 ## Dataframe de teste
 dados.test <- tail(dados.ts.na.removed, n = 7)
 
@@ -78,10 +120,10 @@ for (i in dados.test) {
   output <- forecast(model_fit, h = 1)
   df.pred <- rbind(df.pred, c(output$mean[1]))
   history <- rbind(history, i)
-  print(sprintf("predicted: %s <> expected: %s", output$mean[1], i))
+  #print(sprintf("predicted: %s <> expected: %s", output$mean[1], i))
 }
 
-MSE(df.pred$X0.0306351443186633, dados.test)
+print(MSE(df.pred$X0.0306351443186633, dados.test))
 
 ## Realizando os testes para verificar qual melhor ARIMA a ser aplicado
 autoarima <- auto.arima(dados.ts.na.removed, trace=TRUE)
