@@ -36,6 +36,7 @@ plot(dados.decomposed)
 ## Teste para verificar se a serie é estacionaria
 ## O 'diff' é para torna-la estacionaria
 dados.teste.estacionariedade <- summary(ur.kpss(diff(dados.ts)))
+dados.teste.estacionariedade
 
 ## Tratamento necessário para realizar o forecast
 dados.ts.na.removed <- na.remove(dados.ts)

@@ -1,2 +1,4 @@
 # Ignorar diretorio DEBS
 DEBS/
+.venv/
+.vscode/
