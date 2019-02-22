@@ -1,6 +1,8 @@
 import itertools
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use("agg")
 import matplotlib.pylab as plt
 import statsmodels.api as sm
 from matplotlib.pylab import rcParams
@@ -34,26 +36,12 @@ decomposition = sm.tsa.seasonal_decompose(ts, model='additive')
 #plt.show()
 
 def test_stationarity(timeseries):
-    
-    #Determing rolling statistics
-    #rolmean = pd.rolling_mean(timeseries, window=24)
-    #rolstd = pd.rolling_std(timeseries, window=24)
-
-    #Plot rolling statistics:
-    #orig = plt.plot(timeseries, color='blue',label='Original')
-    #mean = plt.plot(rolmean, color='red', label='Rolling Mean')
-    #std = plt.plot(rolstd, color='black', label = 'Rolling Std')
-    #plt.legend(loc='best')
-    #plt.title('Rolling Mean & Standard Deviation')
-    #plt.show(block=False)
-    
-    #Perform Dickey-Fuller test:
-    print 'Results of Dickey-Fuller Test:'
+    print('Results of Dickey-Fuller Test:')
     dftest = adfuller(timeseries, autolag='AIC')
     dfoutput = pd.Series(dftest[0:4], index=['Test Statistic','p-value','#Lags Used','Number of Observations Used'])
     for key,value in dftest[4].items():
         dfoutput['Critical Value (%s)'%key] = value
-    print dfoutput
+    print(dfoutput)
 
 #test_stationarity(ts)
 
@@ -65,10 +53,10 @@ plt.title('RSS: %.4f'% sum((results_ARIMA.fittedvalues-ts)**2))
 plt.show()
 
 predictions_ARIMA_diff = pd.Series(results_ARIMA.fittedvalues, copy=True)
-print predictions_ARIMA_diff.head()
+print(predictions_ARIMA_diff.head())
 print("#############")
-print ts.head()
+print(ts.head())
 
 predictions_ARIMA_diff_cumsum = predictions_ARIMA_diff.cumsum()
-print predictions_ARIMA_diff_cumsum.head()
+print(predictions_ARIMA_diff_cumsum.head())
 

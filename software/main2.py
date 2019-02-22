@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
-from pyramid.arima import auto_arima
+#from pyramid.arima import auto_arima
+from pmdarima.arima import auto_arima
+import matplotlib
+matplotlib.use("agg")
 import matplotlib.pylab as plt
 from statsmodels.tsa.seasonal import seasonal_decompose
 from matplotlib.pylab import rcParams
@@ -30,17 +33,17 @@ stepwise_model = auto_arima(data, start_p=0, start_q=0,
                            d=0, D=0, trace=True,
                            error_action='ignore',  
                            suppress_warnings=True, 
-                           stepwise=True)
+                           stepwise=True,
+                           stationary=True)
 #print(stepwise_model.aic())
 
 # listas de treino e teste
-train = data.loc['2013-08-31':'2013-09-03']
-test = data.loc['2013-09-02':]
+train = data.loc['2013-08-31':'2013-09-04']
+test = data.loc['2013-09-05':]
 
 stepwise_model.fit(train)
 
-future_forecast = stepwise_model.predict(n_periods=80)
-
+future_forecast = stepwise_model.predict(n_periods=8)
 future_forecast = pd.DataFrame(future_forecast,index = test.index,columns=['Prediction'])
 
 pd.concat([test,future_forecast],axis=1).to_csv("fore.csv")

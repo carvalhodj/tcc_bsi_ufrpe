@@ -41,15 +41,31 @@ dados.teste.estacionariedade
 ## Tratamento necessário para realizar o forecast
 dados.ts.na.removed <- na.remove(dados.ts)
 
+###############################
+##
 ## Holt-Winters
-ajuste.holt <- HoltWinters(dados.ts.na.removed)
+##
+###############################
+
+## Dataframe de teste
+dados.test.hw <- tail(dados.ts.na.removed, n = 7)
+
+## Dataframe de treino
+dados.train.hw <- head(dados.ts.na.removed, n = (length(dados.ts.na.removed) - 7))
+
+ajuste.holt <- HoltWinters(dados.train.hw)
 plot(dados.ts.na.removed, xlab = 'tempo', ylab = 'Valores Observados/Ajustados', main = '')
 lines(fitted(ajuste.holt)[,1], lwd = 2, col = 'red')
 legend(0, 20, c("Consumo", "Ajuste"), lwd = c(1, 2), col = c("black", "red"), bty = 'n')
 
 ## Previsao usando o Holt-Winters
-holt.forecast <- forecast(ajuste.holt, h = 10, level = 95)
+holt.forecast <- forecast(ajuste.holt, h = 7, level = 95)
+#plot(holt.forecast, xlab = "tempo", ylab = "Valores observados/previstos", main = "")
+
+## Plotagem comparando o treino com o teste
 plot(holt.forecast, xlab = "tempo", ylab = "Valores observados/previstos", main = "")
+lines(dados.ts.na.removed, lwd = 2, col = 'green')
+legend(0, 20, c("Consumo", "Ajuste"), lwd = c(1, 2), col = c("green", "blue"), bty = 'n')
 
 ## Realizando uma previsão com método escolhido automagicamente e uma janela de 10 previsões
 dados.fore <- forecast(dados.ts.na.removed, h=10)
@@ -57,6 +73,12 @@ dados.fore
 
 ## gráfico de autocorrelação
 plot(acf(dados.ts.na.removed))
+
+###############################
+##
+## ARIMA
+##
+###############################
 
 ## Realizando o cálculo do erro médio quadrático de cada configuração
 verificar_arimas <- function(x, orig_df) {
@@ -98,6 +120,7 @@ config_list <- matrix(
   byrow = TRUE
 )
 
+## Testar com configurações de arima, variando o 'p', 'd' e 'q' entre 0 e 1
 apply(config_list, 1, verificar_arimas, orig_df = dados.ts.na.removed)
 
 ## Dataframe de teste
@@ -121,7 +144,7 @@ for (i in dados.test) {
   output <- forecast(model_fit, h = 1)
   df.pred <- rbind(df.pred, c(output$mean[1]))
   history <- rbind(history, i)
-  #print(sprintf("predicted: %s <> expected: %s", output$mean[1], i))
+  print(sprintf("predicted: %s <> expected: %s", output$mean[1], i))
 }
 
 print(MSE(df.pred$X0.0306351443186633, dados.test))
