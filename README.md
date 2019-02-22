@@ -1,6 +1,6 @@
 # Recast - previsão de recursos energéticos
 
-Repositório oficial do meu TCC do curso de Bacharelado em Sistemas de Informação.
+Repositório oficial do meu TCC do curso de Bacharelado em Sistemas de Informação na UFRPE.
 
 Referências:
 * https://machinelearningmastery.com/arima-for-time-series-forecasting-with-python/
