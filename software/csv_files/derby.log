@@ -1,0 +1,13 @@
+----------------------------------------------------------------
+Thu Feb 28 08:55:59 BRT 2019:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.12.1.1 - (1704137): instance a816c00e-0169-33f6-13e2-00000efa9ab0 
+on database directory /home/d3jota/UFRPE/BSI/TCC/tcc_bsi_ufrpe/software/csv_files/metastore_db with class loader sun.misc.Launcher$AppClassLoader@3d646c37 
+Loaded from file:/opt/spark-2.4.0-bin-hadoop2.7/jars/derby-10.12.1.1.jar
+java.vendor=Oracle Corporation
+java.runtime.version=1.8.0_201-b09
+user.dir=/home/d3jota/UFRPE/BSI/TCC/tcc_bsi_ufrpe/software/csv_files
+os.name=Linux
+os.arch=amd64
+os.version=4.20.11-200.fc29.x86_64
+derby.system.home=null
+Database Class Loader started - derby.database.classpath=''

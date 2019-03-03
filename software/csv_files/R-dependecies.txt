@@ -1,0 +1,1 @@
+''dependencies ‘httr’, ‘openssl’, ‘xml2’ are not available for package ‘sparklyr’

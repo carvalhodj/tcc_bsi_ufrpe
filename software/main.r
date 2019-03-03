@@ -3,6 +3,8 @@ library(forecast)
 library(urca)
 library(tseries)
 library(MLmetrics)
+library(data.table)
+library(zoo)
 
 setwd("/home/d3jota/UFRPE/BSI/TCC/tcc_bsi_ufrpe/software/csv_files/")
 
@@ -18,7 +20,21 @@ setwd("/home/d3jota/UFRPE/BSI/TCC/tcc_bsi_ufrpe/software/csv_files/")
 # agregado = aggregate(V2 ~ Datetime2, data=dados, FUN=function(x) x[length(x)]-x[1]) # https://blogs.ubc.ca/yiwang28/2017/05/04/my-r-learning-notes-quick-ways-to-aggregate-minutely-data-into-hourly-data/
 # write.csv(agregado, "debs_consumo_agregado.csv")
 ## TERCEIRA PARTE
-dados <- read.csv("debs_consumo_agregado_noz.csv")
+dados <- read.csv("filtered0010-consumo_agregado.csv")
+
+## Remover outliers
+outlierReplace = function(dataframe, cols, rows, newValue = NA) {
+  if (any(rows)) {
+    set(dataframe, rows, cols, newValue)
+  }
+}
+
+## Substituir os outliers por NA
+outlierReplace(dados, "V2", 
+               which(dados$V2 > 1), NA)
+
+## Substituir os NAs pela media do valor anterior e posterior
+dados$V2 <- na.approx(dados$V2)
 
 ## Criando uma nova coluna de objetos 'Date', convertendo da coluna
 ## preexistente de datas, que estao no formato string
@@ -48,10 +64,10 @@ dados.ts.na.removed <- na.remove(dados.ts)
 ###############################
 
 ## Dataframe de teste
-dados.test.hw <- tail(dados.ts.na.removed, n = 7)
+dados.test.hw <- tail(dados.ts.na.removed, n = 100)
 
 ## Dataframe de treino
-dados.train.hw <- head(dados.ts.na.removed, n = (length(dados.ts.na.removed) - 7))
+dados.train.hw <- head(dados.ts.na.removed, n = (length(dados.ts.na.removed) - 100))
 
 ajuste.holt <- HoltWinters(dados.train.hw)
 plot(dados.ts.na.removed, xlab = 'tempo', ylab = 'Valores Observados/Ajustados', main = '')
@@ -59,7 +75,7 @@ lines(fitted(ajuste.holt)[,1], lwd = 2, col = 'red')
 legend(0, 20, c("Consumo", "Ajuste"), lwd = c(1, 2), col = c("black", "red"), bty = 'n')
 
 ## Previsao usando o Holt-Winters
-holt.forecast <- forecast(ajuste.holt, h = 7, level = 95)
+holt.forecast <- forecast(ajuste.holt, h = 100, level = 95)
 #plot(holt.forecast, xlab = "tempo", ylab = "Valores observados/previstos", main = "")
 
 ## Plotagem comparando o treino com o teste
@@ -84,10 +100,10 @@ plot(acf(dados.ts.na.removed))
 verificar_arimas <- function(x, orig_df) {
   configuracao <- c(x[1], x[2], x[3])
   ## Dataframe de teste
-  dados.test <- tail(orig_df, n = 7)
+  dados.test <- tail(orig_df, n = 100)
   
   ## Dataframe de treino
-  dados.train <- head(orig_df, n = (length(orig_df) - 7))
+  dados.train <- head(orig_df, n = (length(orig_df) - 100))
   
   ## Dataframe de predições
   df.pred <- data.frame(pred = numeric(0))
@@ -124,10 +140,10 @@ config_list <- matrix(
 apply(config_list, 1, verificar_arimas, orig_df = dados.ts.na.removed)
 
 ## Dataframe de teste
-dados.test <- tail(dados.ts.na.removed, n = 7)
+dados.test <- tail(dados.ts.na.removed, n = 100)
 
 ## Dataframe de treino
-dados.train <- head(dados.ts.na.removed, n = (length(dados.ts.na.removed) - 7))
+dados.train <- head(dados.ts.na.removed, n = (length(dados.ts.na.removed) - 100))
 
 ## Dataframe de predições
 df.pred <- data.frame(pred = numeric(0))
@@ -140,7 +156,8 @@ for (i in dados.train) {
 }
 
 for (i in dados.test) {
-  model_fit <- arima(history, c(1, 0, 0))
+  #model_fit <- arima(history, c(1, 0, 0))
+  model_fit <- arima(history, c(1, 1, 2), list(order = c(2, 0, 2)))
   output <- forecast(model_fit, h = 1)
   df.pred <- rbind(df.pred, c(output$mean[1]))
   history <- rbind(history, i)

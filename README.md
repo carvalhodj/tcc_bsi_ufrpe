@@ -9,6 +9,9 @@ Repositório oficial do meu TCC do curso de Bacharelado em Sistemas de Informaç
 - spark-ts
 - flint
 - Java Oracle
+- openssl-devel
+- libxml2-devel
+- sparklyr
 
 Referências:
 * https://machinelearningmastery.com/arima-for-time-series-forecasting-with-python/
