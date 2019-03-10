@@ -59,70 +59,6 @@ dados.ts.na.removed <- na.remove(dados.ts)
 
 ###############################
 ##
-## Holt-Winters
-##
-###############################
-
-## Dataframe de teste
-dados.test.hw <- tail(dados.ts.na.removed, n = 100)
-
-## Dataframe de treino
-dados.train.hw <- head(dados.ts.na.removed, n = (length(dados.ts.na.removed) - 100))
-
-ajuste.holt <- HoltWinters(dados.train.hw)
-plot(dados.ts.na.removed, xlab = 'tempo', ylab = 'Valores Observados/Ajustados', main = '')
-lines(fitted(ajuste.holt)[,1], lwd = 2, col = 'red')
-legend(0, 20, c("Consumo", "Ajuste"), lwd = c(1, 2), col = c("black", "red"), bty = 'n')
-
-## Previsao usando o Holt-Winters
-holt.forecast <- forecast(ajuste.holt, h = 100, level = 95)
-#plot(holt.forecast, xlab = "tempo", ylab = "Valores observados/previstos", main = "")
-
-## Plotagem comparando o treino com o teste
-plot(holt.forecast, xlab = "tempo", ylab = "Valores observados/previstos", main = "")
-lines(dados.ts.na.removed, lwd = 2, col = 'green')
-legend(0, 20, c("Consumo", "Ajuste"), lwd = c(1, 2), col = c("green", "blue"), bty = 'n')
-
-## Realizando uma previsão com método escolhido automagicamente e uma janela de 10 previsões
-dados.fore <- forecast(dados.ts.na.removed, h=10)
-dados.fore
-
-## gráfico de autocorrelação
-plot(acf(dados.ts.na.removed))
-
-### FUNCAO PARA SER APLICADA NO SPARK ###
-
-run_holtwinters <- function(df) {
-  ## Dataframe de teste
-  dados.test.hw <- tail(dados.ts.na.removed, n = 100)
-  
-  ## Dataframe de treino
-  dados.train.hw <- head(dados.ts.na.removed, n = (length(dados.ts.na.removed) - 100))
-  
-  ajuste.holt <- HoltWinters(dados.train.hw)
-  plot(dados.ts.na.removed, xlab = 'tempo', ylab = 'Valores Observados/Ajustados', main = '')
-  lines(fitted(ajuste.holt)[,1], lwd = 2, col = 'red')
-  legend(0, 20, c("Consumo", "Ajuste"), lwd = c(1, 2), col = c("black", "red"), bty = 'n')
-  
-  ## Previsao usando o Holt-Winters
-  holt.forecast <- forecast(ajuste.holt, h = 100, level = 95)
-  #plot(holt.forecast, xlab = "tempo", ylab = "Valores observados/previstos", main = "")
-  
-  ## Plotagem comparando o treino com o teste
-  plot(holt.forecast, xlab = "tempo", ylab = "Valores observados/previstos", main = "")
-  lines(dados.ts.na.removed, lwd = 2, col = 'green')
-  legend(0, 20, c("Consumo", "Ajuste"), lwd = c(1, 2), col = c("green", "blue"), bty = 'n')
-  
-  ## Realizando uma previsão com método escolhido automagicamente e uma janela de 10 previsões
-  dados.fore <- forecast(dados.ts.na.removed, h=10)
-  dados.fore
-  
-  ## gráfico de autocorrelação
-  plot(acf(dados.ts.na.removed))
-}
-
-###############################
-##
 ## ARIMA
 ##
 ###############################
@@ -168,7 +104,7 @@ config_list <- matrix(
 )
 
 ## Testar com configurações de arima, variando o 'p', 'd' e 'q' entre 0 e 1
-apply(config_list, 1, verificar_arimas, orig_df = dados.ts.na.removed)
+# apply(config_list, 1, verificar_arimas, orig_df = dados.ts.na.removed)
 
 ## Dataframe de teste
 dados.test <- tail(dados.ts.na.removed, n = 100)
@@ -189,14 +125,16 @@ for (i in dados.train) {
 for (i in dados.test) {
   #model_fit <- arima(history, c(1, 0, 0))
   model_fit <- arima(history, c(1, 1, 2), list(order = c(2, 0, 2)))
-  output <- forecast(model_fit, h = 1)
+  output <- forecast(model_fit, h = 10)
   df.pred <- rbind(df.pred, c(output$mean[1]))
   history <- rbind(history, i)
-  print(sprintf("predicted: %s <> expected: %s", output$mean[1], i))
+  #print(sprintf("predicted: %s <> expected: %s", output$mean[1], i))
 }
 
-print(MSE(df.pred$X0.0306351443186633, dados.test))
+plot(output)
+
+# print(MSE(df.pred$X0.0306351443186633, dados.test))
 
 ## Realizando os testes para verificar qual melhor ARIMA a ser aplicado
-autoarima <- auto.arima(dados.ts.na.removed, trace=TRUE)
-autoarima
+# autoarima <- auto.arima(dados.ts.na.removed, trace=TRUE)
+# autoarima
