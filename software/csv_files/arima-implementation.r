@@ -5,6 +5,7 @@ library(tseries)
 library(MLmetrics)
 library(data.table)
 library(zoo)
+library(normtest)
 
 setwd("/home/d3jota/UFRPE/BSI/TCC/tcc_bsi_ufrpe/software/csv_files/")
 
@@ -122,16 +123,29 @@ for (i in dados.train) {
   history <- rbind(history, i)
 }
 
-for (i in dados.test) {
-  #model_fit <- arima(history, c(1, 0, 0))
-  model_fit <- arima(history, c(1, 1, 2), list(order = c(2, 0, 2)))
-  output <- forecast(model_fit, h = 10)
-  df.pred <- rbind(df.pred, c(output$mean[1]))
-  history <- rbind(history, i)
-  #print(sprintf("predicted: %s <> expected: %s", output$mean[1], i))
-}
+# for (i in dados.test) {
+#   #model_fit <- arima(history, c(1, 0, 0))
+#   model_fit <- arima(history, c(1, 1, 2), list(order = c(2, 0, 2)))
+#   output <- forecast(model_fit, h = 10)
+#   df.pred <- rbind(df.pred, c(output$mean[1]))
+#   history <- rbind(history, i)
+#   #print(sprintf("predicted: %s <> expected: %s", output$mean[1], i))
+# }
 
-plot(output)
+fit.power <- Arima(dados.train, order = c(1, 1, 2),
+                                seasonal = c(2, 0, 2))
+
+## Teste Ljung-Box para testar a autocorrelacao linear dos residuos
+#Box.test(x = fit.power$residuals, lag = 24, type = "Ljung-Box", fitdf = 2)
+
+
+## Testar normalidade dos residuos
+jb.norm.test(fit.power$residuals, nrepl = 10)
+
+## Plot
+# plot(forecast(fit.power, h = 100, level = 0.95), xlab = "tempo", ylab = "Valores observados/previstos", main = "")
+# lines(dados.ts.na.removed, lwd = 2, col = 'green')
+# legend(0, 20, c("Consumo", "Ajuste"), lwd = c(1, 2), col = c("green", "blue"), bty = 'n')
 
 # print(MSE(df.pred$X0.0306351443186633, dados.test))
 
