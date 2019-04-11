@@ -31,6 +31,8 @@ setwd("/home/d3jota/combine/escrever_1/")
 ## Concatenacao dos arquivos csvs menores
 filenames <- list.files(full.names=TRUE)
 
+
+## Buscar tratar arquivos vazios
 All <- lapply(filenames ,function(i){
   if (i != "./_SUCCESS") {
     read.csv(i, header=FALSE, skip=4)
@@ -42,24 +44,26 @@ df <- do.call(rbind.data.frame, All)
 write.csv(df, "all_postcodes.csv", row.names=FALSE)
 
 ## PRIMEIRA PARTE
-# dados <- read.csv("/home/d3jota/combine/escrever_1/all_postcodes.csv", header=FALSE)
-dados <- spark_read_csv(sc, "file:///home/d3jota/combine/escrever_1/all_postcodes.csv", header=FALSE)
-# dados$tempo <- anytime(dados$V2)
-# dados$tempo
-dados$V1 <- NULL
+dados <- spark_read_csv(sc, "file:///home/d3jota/combine/escrever_1/all_postcodes.csv", header=TRUE)
 
-dados2 <- dados[dados$V4 == 0, ]
-dados2 <- dados2[dados2$V6 == 1, ]
-dados2 <- dados2[dados2$V5 == 0, ]
+## Convertendo o timestamp para data
+mutate(dados, V2 = to_timestamp(V2))
 
+## Selecionar todas as colunas exceto a V1
+dados <- select(dados, -V1)
+
+## Filtrando o plug, comodo e casa
+dados2 <- dados %>% filter(V4 == 0)
+dados2 <- dados2 %>% filter(V6 == 1)
+dados2 <- dados2 %>% filter(V5 == 0)
+
+## Escrevendo um CSV
 sparklyr::spark_write_csv(dados2, "dados2.csv", header = FALSE, delimiter = ",",
                           charset = "UTF-8", null_value = NULL,
                           options = list(), mode = "overwrite", partition_by = NULL)
 
-# head(dados2)
-# write.csv(dados, "sorted_tempo.csv")
-# ## SEGUNDA PARTE
-dados <- spark_read_csv(sc, "dados2.csv")
+## SEGUNDA PARTE
+dados <- spark_read_csv(sc, "condensed.csv")
 dados$datetime <- as.POSIXct(as.numeric(as.character(dados$V2)),origin="1970-01-01",tz="GMT")
 dados$Datetime2 <- droplevels(cut(dados$datetime, breaks="hours"))
 agregado = aggregate(V3 ~ Datetime2, data=dados, FUN=function(x) x[length(x)]-x[1])
