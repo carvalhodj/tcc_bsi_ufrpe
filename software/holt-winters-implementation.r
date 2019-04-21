@@ -119,4 +119,7 @@ run_holtwinters <- function(df) {
   
   ## gráfico de autocorrelação
   plot(acf(dados.ts.na.removed))
+  
+  # print("### calculo do erro ###")
+  # print(MSE(holt.forecast[, 1], dados.test.hw))
 }

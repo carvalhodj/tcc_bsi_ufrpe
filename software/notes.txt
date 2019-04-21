@@ -1,0 +1,10 @@
+[18/04/2019]
+## Tempo para ler o arquivo original grande
+3.329088h ~= 3 horas e 20 minutos
+
+[20/04/2019]
+## Tempo para ler o arquivo original grande
+3.885993h ~= 3 horas, 53 minutos e 9 segundos
+
+## Tempo para filtrar por residência e escrever os respectivos csv's
+1.187896d ~= 1 dia, 4 horas, 30 minutos e 34 segundos
