@@ -7,6 +7,7 @@ library(data.table)
 library(zoo)
 library(sparklyr)
 library(dplyr)
+library(dbplyr)
 library(tidyverse)
 library(lubridate)
 
@@ -72,47 +73,24 @@ end_time_2 - start_time_2
 
 df_test <- spark_read_csv(sc, "file:///home/d3jota/debs/house_5/part-00000-3df2ef7b-02e1-4c16-b696-aed730198012-c000.csv", header = FALSE)
 
+## Renomeia as colunas
+names(df_test) <- c("id", "ts", "value","work_or_load","plug_id","household_id","house_id")
+
 ## Filtra o consumo acumulado
-df_test <- df_test %>% filter(V4 == 0)
-# df_test <- df_test %>% filter(V5 == 0)
-# df_test <- df_test %>% filter(V6 == 0)
+df_test <- df_test %>% filter(work_or_load == 0)
 
 ## Remove a coluna de ID do CSV original
-df_test <- select(df_test, -V1)
+df_test <- select(df_test, -id)
 
-reduce
+## Formata o timestamp em data e hora
+df_test3 <- df_test %>% mutate(hora = from_unixtime(ts, 'yyyy-MM-dd HH'))
 
-## Criando uma coluna com o acumulado geral em cada timestamp
-df_test <- df_test %>% arrange(V2) %>% mutate(acumulado = cumsum(V3))
+## Cria uma coluna com o consumo acumulado de cada plug por comodo
+df_test4 <- df_test3 %>% group_by(hora, household_id, plug_id) %>% arrange(hora, household_id, plug_id) %>% summarise(consumo = max(value))
 
-#df_test2 <- df_test %>% mutate(datatempo = (to_timestamp(V2)))
+## Soma o consumo de todos os plugs por hora
+df_test5 <- df_test4 %>% group_by(hora) %>% arrange(hora) %>% summarise(total = sum(consumo))
 
-df_test3 <- df_test2 %>% mutate(hora = from_unixtime(V2, 'yyyy-MM-dd HH'))
-df_test4 <- df_test3 %>% group_by(hora, V6, V5) %>% arrange(hora, V6, V5) %>% summarise(consumo = max(V3))
-df_test5 <- df_test3 %>% group_by(hora, V6, V5) %>% arrange(hora, V6, V5) %>% summarise(consumo = max(V3) - lag(max(V3)))
+## Faz a diferenca de consumo entre a hora presente e a anterior
+df_test6 <- df_test5 %>% group_by(hora) %>% arrange(hora) %>% mutate(diferenca = total - lag(total, default = 99.2))
 
-df_test2 <- df_test %>% group_by(datatempo = cut(datatempo, breaks = "hours")) %>% 
-  
-func_teste <- function(df) {
-  df$tempo <- anytime::anytime(df$V2)
-  # df$datetime <- as.POSIXct(as.numeric(as.character(df$V2)),origin="1970-01-01",tz="GMT")
-  # df$Datetime2 <- droplevels(cut(df$datetime, breaks="hours"))
-  # agregado = aggregate(acumulado ~ Datetime2, data=df, FUN=function(x) x[length(x)]-x[1])
-}
-
-start_time_3 <- Sys.time()
-start_time_3
-
-teste <- df_test %>% spark_apply(func_teste)
-
-end_time_3 <- Sys.time()
-end_time_3
-
-end_time_3 - start_time_3
-
-head(teste)
-
-df_test_2 <- df_test %>% mutate(datetime = (to_timestamp(V2)))
-teste <- df_test_2 %>% group_by(datetime, V6, V5) %>% arrange(datetime) %>% mutate(diff = V3 - lag(V3))
-teste2 <- teste %>% select(-V1)
-teste3 <- teste2 %>% spark_apply(func_teste)
