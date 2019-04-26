@@ -94,3 +94,8 @@ df_test5 <- df_test4 %>% group_by(hora) %>% arrange(hora) %>% summarise(total = 
 ## Faz a diferenca de consumo entre a hora presente e a anterior
 df_test6 <- df_test5 %>% group_by(hora) %>% arrange(hora) %>% mutate(diferenca = total - lag(total, default = 99.2))
 
+## Escrita de CSV
+df_one <- sdf_repartition(df_test6, 1)
+sparklyr::spark_write_csv(df_one, "teste/house_5", header = TRUE, delimiter = ",",
+                          charset = "UTF-8", null_value = NULL,
+                          options = list(), mode = "overwrite", partition_by = NULL)

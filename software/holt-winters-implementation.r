@@ -6,8 +6,6 @@ library(MLmetrics)
 library(data.table)
 library(zoo)
 
-setwd("/home/d3jota/UFRPE/BSI/TCC/tcc_bsi_ufrpe/software/csv_files/")
-
 ## PRIMEIRA PARTE
 # dados <- read.csv("sorted_tempo.csv", header=FALSE)
 # dados$tempo <- anytime(dados$V1)
@@ -17,10 +15,10 @@ setwd("/home/d3jota/UFRPE/BSI/TCC/tcc_bsi_ufrpe/software/csv_files/")
 # dados <- read.csv("sorted_tempo.csv")
 # dados$datetime <- as.POSIXct(as.numeric(as.character(dados$V1)),origin="1970-01-01",tz="GMT")
 # dados$Datetime2 <- droplevels(cut(dados$datetime, breaks="hours"))
-# agregado = aggregate(V2 ~ Datetime2, data=dados, FUN=function(x) x[length(x)]-x[1]) # https://blogs.ubc.ca/yiwang28/2017/05/04/my-r-learning-notes-quick-ways-to-aggregate-minutely-data-into-hourly-data/
+# agregado = aggregate(diferenca ~ Datetime2, data=dados, FUN=function(x) x[length(x)]-x[1]) # https://blogs.ubc.ca/yiwang28/2017/05/04/my-r-learning-notes-quick-ways-to-aggregate-minutely-data-into-hourly-data/
 # write.csv(agregado, "debs_consumo_agregado.csv")
 ## TERCEIRA PARTE
-dados <- read.csv("filtered0010-consumo_agregado.csv")
+dados <- read.csv("/home/d3jota/teste/house_5/house_5.csv")
 
 ## Remover outliers
 outlierReplace = function(dataframe, cols, rows, newValue = NA) {
@@ -30,11 +28,11 @@ outlierReplace = function(dataframe, cols, rows, newValue = NA) {
 }
 
 ## Substituir os outliers por NA
-outlierReplace(dados, "V2", 
-               which(dados$V2 > 1), NA)
+outlierReplace(dados, "diferenca", 
+               which(dados$diferenca > 1), NA)
 
 ## Substituir os NAs pela media do valor anterior e posterior
-dados$V2 <- na.approx(dados$V2)
+dados$diferenca <- na.approx(dados$diferenca)
 
 ## Criando uma nova coluna de objetos 'Date', convertendo da coluna
 ## preexistente de datas, que estao no formato string
@@ -43,7 +41,7 @@ dados$V2 <- na.approx(dados$V2)
 
 ## Criando a serie temporal com os dados lidos do csv
 ## Frequencia de 24 pois sao dados diarios medidos de hora em hora
-dados.ts <- ts(dados$V2, frequency=24)
+dados.ts <- ts(dados$diferenca, frequency=24)
 
 ## Decompondo a serie temporal a fim de verificar cada componente
 dados.decomposed <- decompose(dados.ts)
@@ -51,8 +49,10 @@ plot(dados.decomposed)
 
 ## Teste para verificar se a serie é estacionaria
 ## O 'diff' é para torna-la estacionaria
-dados.teste.estacionariedade <- summary(ur.kpss(diff(dados.ts)))
+dados.teste.estacionariedade <- summary(ur.kpss(diff(diff(dados.ts))))
 dados.teste.estacionariedade
+
+dados.ts <- diff(diff(dados.ts))
 
 ## Tratamento necessário para realizar o forecast
 dados.ts.na.removed <- na.remove(dados.ts)
@@ -83,9 +83,8 @@ plot(holt.forecast, xlab = "tempo", ylab = "Valores observados/previstos", main 
 lines(dados.ts.na.removed, lwd = 2, col = 'green')
 legend(0, 20, c("Consumo", "Ajuste"), lwd = c(1, 2), col = c("green", "blue"), bty = 'n')
 
-## Realizando uma previsão com método escolhido automagicamente e uma janela de 10 previsões
-dados.fore <- forecast(dados.ts.na.removed, h=10)
-dados.fore
+## Calculo dos indices de erro
+accuracy(holt.forecast, x = dados.test.hw)
 
 ## gráfico de autocorrelação
 plot(acf(dados.ts.na.removed))
