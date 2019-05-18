@@ -1,0 +1,108 @@
+> 
+> ## Funcoes ARIMA e Holt-Winters para o sistema
+> source("/home/d3jota/UFRPE/BSI/TCC/tcc_bsi_ufrpe/software/arima-implementation.R")
+> source("/home/d3jota/UFRPE/BSI/TCC/tcc_bsi_ufrpe/software/holt-winters-implementation.R")
+> 
+> ##################################################################
+> ### Iniciar conexao com o spark
+> ##################################################################
+> 
+> config = spark_config()
+> config$`sparklyr.backend.threads` <- "4"
+> config$`sparklyr.shell.driver-memory` <- "4G"
+> config$`sparklyr.shell.executor-memory` <- "4G"
+> config$`spark.executor.memoryOverhead` <- "1g"
+> 
+> config$`sparklyr.shell.driver-java-options` <-  paste0("-Djava.io.tmpdir=", "/home/d3jota/.tmp")
+> 
+> sc <- sparklyr::spark_connect(master = "local", 
++                               spark_home = "/opt/spark",
++                               config = config)
+> ##################################################################
+> ### Leitura do CSV original
+> ##################################################################
+> 
+> start_time <- Sys.time()
+> start_time
+[1] "2019-05-08 20:43:04 -03"
+> 
+> df <- spark_read_csv(sc, "file:///home/d3jota/UFRPE/BSI/TCC/sorted.csv", header = FALSE)
+> 
+> names(df) <- c("id", "ts", "value","work_or_load","plug_id","household_id","house_id")
+> 
+> end_time <- Sys.time()
+> end_time                                                                                                                                                                                                                                                 end_time - start_time
+Erro: unexpected symbol in "d_time                                                                                                                                                                                          "
+> 
+> ##################################################################
+> ### Filtragem por residencia - Calculo do consumo - Escrita CSVs - NAO UTILIZAR
+> ##################################################################
+> 
+> start_time_calculo_consumo <- Sys.time()
+> start_time_calculo_consumo
+[1] "2019-05-09 00:36:53 -03"
+> 
+> sparkR.session(sparkHome = "/opt/spark")
+Spark package found in SPARK_HOME: /opt/spark
+Launching java with spark-submit command /opt/spark/bin/spark-submit   sparkr-shell /tmp/RtmpQ8I2pp/backend_port48f15e353370 
+2019-05-09 00:36:55 WARN  NativeCodeLoader:62 - Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+2019-05-09 00:36:57 WARN  Utils:66 - Service 'SparkUI' could not bind on port 4040. Attempting port 4041.
+Java ref type org.apache.spark.sql.SparkSession id 1 
+Warning message:
+In sparkR.session(sparkHome = "/opt/spark") :
+  Version mismatch between Spark JVM and SparkR package. JVM version was 2.4.0 , while R package version was 2.4.1
+> 
+> for (house in 0:39) {
++   df_house <- filter(df, house_id == house)
++   
++   ## Filtra o consumo acumulado
++   df_house_work <- df_house %>% filter(work_or_load == 0)
++   
++   ## Remove a coluna de ID do CSV original
++   df_house_work <- select(df_house_work, -id)
++   
++   ## Formata o timestamp em data e hora
++   df_house_work_datetime <- df_house_work %>% mutate(hora = from_unixtime(ts, 'yyyy-MM-dd HH'))
++   
++   ## Cria uma coluna com o consumo acumulado de cada plug por comodo
++   df_house_cum <- df_house_work_datetime %>% group_by(hora, household_id, plug_id) %>% arrange(hora, household_id, plug_id) %>% summarise(consumo = max(value))
++   
++   ## Soma o consumo de todos os plugs por hora
++   df_house_cum_hourly <- df_house_cum %>% group_by(hora) %>% arrange(hora) %>% summarise(total = sum(consumo))
++   
++   ## Faz a diferenca de consumo entre a hora presente e a anterior
++   df_house_cum_hourly <- df_house_cum_hourly %>% select(hora, total) %>% mutate(base_value = first(total))
++   df_house_spent <- df_house_cum_hourly %>% group_by(hora) %>% arrange(hora) %>% mutate(diferenca = total - lag(total, default = base_value))
++   df_house_spent <- df_house_spent %>% select(-base_value)
++   
++   ## Extrair a coluna do consumo por hora
++   column_difference <- dplyr::pull(df_house_spent, diferenca)
++   
++   ## Criar uma lista para usar o metodo lapply e
++   ### inserir a coluna extraida
++   list_df <- list()
++   list_df[[1]] <- column_difference
++   
++   ## ARIMA
++   spark.lapply(list_df, run_arima)
++   
++   ## Holt-Winters
++   spark.lapply(list_df, run_hw)
++ }
+Warning messages:                                                               
+1: Missing values are always removed in SQL.
+Use `SUM(x, na.rm = TRUE)` to silence this warning
+This warning is displayed only once per session. 
+2: Missing values are always removed in SQL.
+Use `MAX(x, na.rm = TRUE)` to silence this warning
+This warning is displayed only once per session. 
+> 
+> end_time_calculo_consumo <- Sys.time()
+> end_time_calculo_consumo
+[1] "2019-05-11 02:50:00 -03"
+> 
+> end_time_calculo_consumo - start_time_calculo_consumo
+Time difference of 2.092441 days
+2019-05-11 04:30:00 WARN  RBackendHandler:66 - Ignoring read timeout in RBackendHandler
