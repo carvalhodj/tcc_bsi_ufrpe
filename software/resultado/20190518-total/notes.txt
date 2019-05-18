@@ -1,0 +1,15 @@
+## TOTAL
+
+# LEITURA
+
+Inicio: 16/05/2019 - 06:02:05
+Fim:	16/05/2019 - 09:50:59
+
+Duracao: 3,815022 horas ~ 3 horas, 48 minutos e 54 segundos
+
+# FILTRAGEM PREVISAO E FINALIZACAO
+
+Inicio: 16/05/2019 - 09:50:59
+Fim:	18/05/2019 - 14:14:02
+
+Duracao: 2,182681 dias ~ 2 dias, 4 horas, 23 minutos e 3 segundos
