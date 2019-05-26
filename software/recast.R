@@ -7,6 +7,7 @@ library(lubridate)
 ## Funcoes ARIMA e Holt-Winters para o sistema
 source("/home/d3jota/UFRPE/BSI/TCC/tcc_bsi_ufrpe/software/arima-implementation.R")
 source("/home/d3jota/UFRPE/BSI/TCC/tcc_bsi_ufrpe/software/holt-winters-implementation.R")
+source("/home/d3jota/UFRPE/BSI/TCC/tcc_bsi_ufrpe/software/utils.R")
 
 ##################################################################
 ### Iniciar conexao com o spark
@@ -172,43 +173,46 @@ end_time_calculo_consumo - start_time_calculo_consumo
 ### Calculo do consumo acumulado por hora
 ##################################################################
 
-# df_test <- spark_read_csv(sc, "file:///home/d3jota/debs/house_5/house_5.csv", header = FALSE)
+df_test <- spark_read_csv(sc, "file:///home/d3jota/debs/teste_out.csv", header = FALSE)
+
+## Renomeia as colunas
+names(df_test) <- c("id", "ts", "value","work_or_load","plug_id","household_id","house_id")
+
+## Filtra o consumo acumulado
+df_test <- df_test %>% filter(work_or_load == 1)
+
+## Remove a coluna de ID do CSV original
+df_test <- select(df_test, -id)
+
+## Formata o timestamp em data e hora
+df_test3 <- df_test %>% mutate(hora = from_unixtime(ts, 'yyyy-MM-dd HH'))
+
+## Cria uma coluna com a media do consumo de cada plug por comodo
+df_test4 <- df_test3 %>% group_by(hora, household_id, plug_id) %>% arrange(hora, household_id, plug_id) %>% summarise(consumo = mean(value))
+
+## Soma o consumo de todos os plugs por hora
+df_test5 <- df_test4 %>% group_by(hora) %>% arrange(hora) %>% summarise(total = sum(consumo))
+# # 
+# # ## Escrita de CSV
+# # df_one <- sdf_repartition(df_test5, 1)
+# # sparklyr::spark_write_csv(df_one, "/home/d3jota/teste/house_51", header = TRUE, delimiter = ",",
+# #                           charset = "UTF-8", null_value = NULL,
+# #                           options = list(), mode = "overwrite", partition_by = NULL)
+# # 
+## Extrair a coluna do consumo por hora
+column_difference <- dplyr::pull(df_test5, total)
+
+df_r <- sparklyr::collect(df_test5)
 # 
-# ## Renomeia as colunas
-# names(df_test) <- c("id", "ts", "value","work_or_load","plug_id","household_id","house_id")
+## Criar uma lista para usar o metodo lapply e
+### inserir a coluna extraida
+list_df <- list()
+list_df[[1]] <- column_difference
 # 
-# ## Filtra o consumo acumulado
-# df_test <- df_test %>% filter(work_or_load == 1)
-# 
-# ## Remove a coluna de ID do CSV original
-# df_test <- select(df_test, -id)
-# 
-# ## Formata o timestamp em data e hora
-# df_test3 <- df_test %>% mutate(hora = from_unixtime(ts, 'yyyy-MM-dd HH'))
-# 
-# ## Cria uma coluna com a media do consumo de cada plug por comodo
-# df_test4 <- df_test3 %>% group_by(hora, household_id, plug_id) %>% arrange(hora, household_id, plug_id) %>% summarise(consumo = mean(value))
-# 
-# ## Soma o consumo de todos os plugs por hora
-# df_test5 <- df_test4 %>% group_by(hora) %>% arrange(hora) %>% summarise(total = sum(consumo))
-# 
-# ## Escrita de CSV
-# df_one <- sdf_repartition(df_test5, 1)
-# sparklyr::spark_write_csv(df_one, "/home/d3jota/teste/house_51", header = TRUE, delimiter = ",",
-#                           charset = "UTF-8", null_value = NULL,
-#                           options = list(), mode = "overwrite", partition_by = NULL)
-# 
-# ## Extrair a coluna do consumo por hora
-# column_difference <- dplyr::pull(df_test5, total)
-# 
-# ## Criar uma lista para usar o metodo lapply e
-# ### inserir a coluna extraida
-# list_df <- list()
-# list_df[[1]] <- column_difference
-# 
-# ## ARIMA
-# spark.lapply(list_df, run_arima)
-# spark.lapply(list_df, run_hw)
+sparkR.session(sparkHome = "/opt/spark")
+
+spark.lapply(list_df, run_arima)
+spark.lapply(list_df, run_hw)
 
 ##############################################################
 ### Metodos de previsao

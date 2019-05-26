@@ -15,7 +15,21 @@ run_arima <- function(column_difference) {
   require(zoo)
   require(normtest)
   
+  ## Eliminar outliers
+  qnt <- quantile(column_difference, probs=c(.25, .75), na.rm = T)
+  caps <- quantile(column_difference, probs=c(.05, .95), na.rm = T)
+  H <- 1.5 * IQR(column_difference, na.rm = T)
+  column_difference[column_difference < (qnt[1] - H)] <- caps[1]
+  column_difference[column_difference > (qnt[2] + H)] <- caps[2]
+  column_difference[column_difference == 0] <- caps[1]
+  
   dados_ts <- ts(column_difference, frequency=24)
+  
+  ## Arquivo do gráfico
+  name <- paste("arima_graphs", Sys.time(), sep = "_")
+  name_pdf <- paste(name, "pdf", sep = ".")
+  
+  pdf(name_pdf)
   
   # #ts.plot(dados_ts, ylab ="Consumo de energia elétrica", xlab = "dias")
   # 
@@ -47,7 +61,8 @@ run_arima <- function(column_difference) {
                           stepwise = FALSE,
                           approximation = FALSE,
                           seasonal = TRUE,
-                          trace = TRUE)
+                          trace = TRUE,
+                          D = 1)
   
   order_arima <- arimaorder(fit_power)
   
@@ -60,42 +75,43 @@ run_arima <- function(column_difference) {
   
   ## Box-Ljung
   ## Teste da ausência de autocorrelação linear
-  test_box <- Box.test(x = fit_power$residuals,
-                       lag = 24,
-                       type = "Ljung-Box",
-                       fitdf = 2)
-  
+  # test_box <- Box.test(x = fit_power$residuals,
+  #                      lag = 24,
+  #                      type = "Ljung-Box",
+  #                      fitdf = 2)
+  # 
   ## Teste para confirmar a ausência de autocorrelação
   ### linear
   # test_box$p.value < test_box$statistic
   # test_box
   
-  ## Teste da ausência de autocorrelação da variância
-  require(FinTS)
-  test_arc <- ArchTest(fit_power$residuals,
-                       lags = 12)
+  # ## Teste da ausência de autocorrelação da variância
+  # require(FinTS)
+  # test_arc <- ArchTest(fit_power$residuals,
+  #                      lags = 12)
   
   ## Teste para confirmar a ausência de autocorrelação
   ### da variância
   # test_arc$p.value < test_arc$statistic
   # test_arc
   
-  ## Teste da normalidade
-  test_norm <- jb.norm.test(fit_power$residuals,
-                            nrepl = 2000)
+  # ## Teste da normalidade
+  # test_norm <- jb.norm.test(fit_power$residuals,
+  #                           nrepl = 2000)
   
   ## Teste para confirmar a normalidade
   # test_norm$p.value < test_norm$statistic
   # test_norm
   
-  ## Previsão
-  # plot(forecast(object = fit_power,
-  #               h = 100,
-  #               level = 0.95))
-  
   arima_forecast <- forecast(object = fit_power,
                              h = 72,
                              level = 0.95)
+  
+  ## Previsão
+  plot(arima_forecast, xlab = "Dias", ylab = "Valores reais/previstos (Wh)", main = "")
+  lines(dados_ts, lwd = 2, col = 'green')
+  legend("topright", c("Real", "Previsto"), lwd = c(1, 2), 
+         col = c("green", "blue"), bty = 'o')
   
   write.table(arima_forecast,
               file = "arima_forecast.txt",
@@ -114,6 +130,6 @@ run_arima <- function(column_difference) {
               file = "indices_arima.txt",
               append = TRUE)
   
-  
+  dev.off()
   
 }
