@@ -4,7 +4,7 @@
 # 
 # dados$diferenca <- na.approx(dados$diferenca)
 
-run_arima <- function(column_difference) {
+run_arima <- function(in_column_difference) {
   ## Libs necessarias
   require(anytime)
   require(forecast)
@@ -15,13 +15,22 @@ run_arima <- function(column_difference) {
   require(zoo)
   require(normtest)
   
+  FORECAST_WINDOW <- 72
+  
   ## Eliminar outliers
   qnt <- quantile(column_difference, probs=c(.25, .75), na.rm = T)
   caps <- quantile(column_difference, probs=c(.05, .95), na.rm = T)
   H <- 1.5 * IQR(column_difference, na.rm = T)
   column_difference[column_difference < (qnt[1] - H)] <- caps[1]
   column_difference[column_difference > (qnt[2] + H)] <- caps[2]
-  column_difference[column_difference == 0] <- caps[1]
+  
+  # qnt <- quantile(in_column_difference, probs=c(.25, .75), na.rm = TRUE)
+  # # caps <- quantile(coluna_diferenca, probs=c(.05, .95), na.rm = T)
+  # H <- 1.5 * IQR(in_column_difference, na.rm = TRUE)
+  # column_difference <- in_column_difference
+  # column_difference[in_column_difference < (qnt[1] - H)] <- NA
+  # column_difference[in_column_difference > (qnt[2] + H)] <- NA
+  # na.approx(column_difference)
   
   dados_ts <- ts(column_difference, frequency=24)
   
@@ -51,11 +60,13 @@ run_arima <- function(column_difference) {
   
   ## Estimar o modelo
   
-  dados_ts <- na.remove(dados_ts)
+  dados_ts <- na.approx(dados_ts)
   
   ## Dividindo treino e teste
-  dados_test <- tail(dados_ts, n = 72)
-  dados_train <- head(dados_ts, n = (length(dados_ts) - 72))
+  dados_test_hw <- tail(dados_ts, n = 2 * FORECAST_WINDOW)
+  dados_test_hw <- head(dados_test_hw, n = FORECAST_WINDOW)
+  
+  dados_train <- head(dados_ts, n = (length(dados_ts) - (2 * FORECAST_WINDOW)))
   
   fit_power <- auto.arima(y = dados_train,
                           stepwise = FALSE,
@@ -104,8 +115,8 @@ run_arima <- function(column_difference) {
   # test_norm
   
   arima_forecast <- forecast(object = fit_power,
-                             h = 72,
-                             level = 0.95)
+                             h = FORECAST_WINDOW,
+                             level = c(90, 95))
   
   ## Previsão
   plot(arima_forecast, xlab = "Dias", ylab = "Valores reais/previstos (Wh)", main = "")
@@ -123,11 +134,20 @@ run_arima <- function(column_difference) {
   ## Métricas
   indices <- accuracy(arima_forecast, x = dados_test)
   
+  indices_season <- accuracy(arima_forecast, x = dados_test, d = 0, D = 1)
+  
   write.table(indices,
               file = "indices_arima.txt",
               append = TRUE)
   write.table("======",
               file = "indices_arima.txt",
+              append = TRUE)
+  
+  write.table(indices_season,
+              file = "indices_season_arima.txt",
+              append = TRUE)
+  write.table("======",
+              file = "indices_season_arima.txt",
               append = TRUE)
   
   dev.off()

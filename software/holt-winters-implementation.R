@@ -115,7 +115,7 @@
 ################################
 ################################
 
-run_hw <- function(coluna_diferenca) {
+run_hw <- function(in_coluna_diferenca) {
   ## Libs
   require(forecast)
   require(urca)
@@ -128,15 +128,15 @@ run_hw <- function(coluna_diferenca) {
   FORECAST_WINDOW <- 72
   
   ## Eliminar outliers
-  qnt <- quantile(coluna_diferenca, probs=c(.25, .75), na.rm = T)
-  caps <- quantile(coluna_diferenca, probs=c(.05, .95), na.rm = T)
-  H <- 1.5 * IQR(coluna_diferenca, na.rm = T)
-  coluna_diferenca[coluna_diferenca < (qnt[1] - H)] <- caps[1]
-  coluna_diferenca[coluna_diferenca > (qnt[2] + H)] <- caps[2]
-  na.approx(coluna_diferenca)
+  qnt <- quantile(in_coluna_diferenca, probs=c(.25, .75), na.rm = TRUE)
+  caps <- quantile(in_coluna_diferenca, probs=c(.05, .95), na.rm = T)
+  H <- 1.5 * IQR(in_coluna_diferenca, na.rm = TRUE)
+  coluna_diferenca <- in_coluna_diferenca
+  coluna_diferenca[in_coluna_diferenca < (qnt[1] - H)] <- caps[1]
+  coluna_diferenca[in_coluna_diferenca > (qnt[2] + H)] <- caps[2]
   
   ## Criando o objeto timeseries
-  dados_ts <- ts(coluna_diferenca, frequency=24)
+  dados_ts <- ts(coluna_diferenca, frequency=24*7)
   
   ## Arquivo do gráfico
   name <- paste("holtwinters_graphs", Sys.time(), sep = "_")
@@ -156,26 +156,29 @@ run_hw <- function(coluna_diferenca) {
   #             append = TRUE)
   
   ## Tratamento necessário para realizar o forecast
-  dados_ts_na_removed <- na.remove(dados_ts)
-
+  dados_ts_na_removed <- na.approx(dados_ts)
+  
   ## Dataframe de teste
-  dados_test_hw <- tail(dados_ts_na_removed, n = FORECAST_WINDOW)
+  dados_test_hw <- tail(dados_ts_na_removed, n = 2 * FORECAST_WINDOW)
+  dados_test_hw <- head(dados_test_hw, n = FORECAST_WINDOW)
 
   ## Dataframe de treino
-  dados_train_hw <- head(dados_ts_na_removed, n = (length(dados_ts_na_removed) - FORECAST_WINDOW))
+  dados_train_hw <- head(dados_ts_na_removed, n = (length(dados_ts_na_removed) - (2 * FORECAST_WINDOW)))
 
   ajuste_holt <- HoltWinters(dados_train_hw)
   
-  # write.table(ajuste_holt.coefficients,
+  plot(fitted(ajuste_holt))
+  
+  # write.table(ajuste_holt.coefficients[1],
   #             file = "ajuste_holt.txt",
   #             append = TRUE)
   # write.table("======",
   #             file = "ajuste_holt.txt",
   #             append = TRUE)
   
-  plot(dados_ts_na_removed, xlab = 'Dias', ylab = 'Valores reais/ajustados (Wh)', main = '')
-  lines(fitted(ajuste_holt)[,1], lwd = 2, col = 'red')
-  legend("topright", c("Consumo", "Ajuste"), lwd = c(1, 2), col = c("black", "red"), bty = 'o')
+  # plot(dados_ts_na_removed, xlab = 'Dias', ylab = 'Valores reais/ajustados (Wh)', main = '')
+  # lines(fitted(ajuste_holt)[,1], lwd = 2, col = 'red')
+  # legend("topright", c("Consumo", "Ajuste"), lwd = c(1, 2), col = c("black", "red"), bty = 'o')
 
   ## Previsao usando o Holt-Winters
   holt_forecast <- forecast(ajuste_holt, h = FORECAST_WINDOW, level = 95)
@@ -193,6 +196,12 @@ run_hw <- function(coluna_diferenca) {
   lines(dados_ts_na_removed, lwd = 2, col = 'green')
   legend("topright", c("Real", "Previsto"), lwd = c(1, 2), 
          col = c("green", "blue"), bty = 'o')
+  
+  # plot(acf(holt_forecast$residuals, lag.max = 20))
+  # plot(pacf(holt_forecast$residuals, lag.max = 20))
+  # 
+  plot(acf(dados_ts_na_removed, lag.max = 20))
+  plot(pacf(dados_ts_na_removed, lag.max = 20))
 
   dev.off()
   
@@ -220,18 +229,18 @@ run_hw_df <- function(df) {
   require(zoo)
   require(stats)
   
-  FORECAST_WINDOW <- 72
+  FORECAST_WINDOW <- 12
   
   ## Eliminar outliers
   # qnt <- quantile(df$total, probs=c(.25, .75), na.rm = T)
   # caps <- quantile(df$total, probs=c(.05, .95), na.rm = T)
   # H <- 1.5 * IQR(df$total, na.rm = T)
-  # df[df$total < (qnt[1] - H)] <- caps[1]
-  # df[df$total > (qnt[2] + H)] <- caps[2]
+  # df[total < (qnt[1] - H)] <- caps[1]
+  # df[total > (qnt[2] + H)] <- caps[2]
   # na.approx(df$total)
   
   ## Criando o objeto timeseries
-  dados_ts <- ts(df$total, frequency=24, start = as.Date("2013-08-31"))
+  dados_ts <- ts(df$total, frequency=24)
   
   ## Arquivo do gráfico
   name <- paste("holtwinters_graphs", Sys.time(), sep = "_")
@@ -251,7 +260,14 @@ run_hw_df <- function(df) {
   #             append = TRUE)
   
   ## Tratamento necessário para realizar o forecast
-  dados_ts_na_removed <- na.remove(dados_ts)
+  dados_ts_na_removed <- dados_ts
+  
+  write.table(dados_ts_na_removed,
+              file = "dados_ts_na.txt",
+              append = TRUE)
+  write.table("======",
+              file = "dados_ts_na.txt",
+              append = TRUE)
   
   ## Dataframe de teste
   dados_test_hw <- tail(dados_ts_na_removed, n = FORECAST_WINDOW)
@@ -273,7 +289,7 @@ run_hw_df <- function(df) {
   legend("topright", c("Consumo", "Ajuste"), lwd = c(1, 2), col = c("black", "red"), bty = 'o')
   
   ## Previsao usando o Holt-Winters
-  holt_forecast <- forecast(ajuste_holt, h = FORECAST_WINDOW, level = 95)
+  holt_forecast <- forecast(ajuste_holt, h = FORECAST_WINDOW, level = 90)
   # plot(holt_forecast, xlab = "tempo", ylab = "Valores observados/previstos", main = "")
   
   write.table(holt_forecast,
@@ -292,12 +308,21 @@ run_hw_df <- function(df) {
   dev.off()
   
   ## Calculo dos indices de erro
-  indices <- accuracy(holt_forecast, x = dados_test_hw, d = 0, D = 1)
+  indices <- accuracy(holt_forecast, x = dados_test)
+  
+  indices_season <- accuracy(holt_forecast, x = dados_test_hw, d = 0, D = 1)
   
   write.table(indices,
               file = "indices_hw.txt",
               append = TRUE)
   write.table("======",
               file = "indices_hw.txt",
+              append = TRUE)
+  
+  write.table(indices,
+              file = "indices_season_hw.txt",
+              append = TRUE)
+  write.table("======",
+              file = "indices_season_hw.txt",
               append = TRUE)
 }

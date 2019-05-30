@@ -202,7 +202,8 @@ df_test5 <- df_test4 %>% group_by(hora) %>% arrange(hora) %>% summarise(total = 
 ## Extrair a coluna do consumo por hora
 column_difference <- dplyr::pull(df_test5, total)
 
-df_r <- sparklyr::collect(df_test5)
+## Coletar o dataframe inteiro para pegar o id da casa dentro da função!!! <<<<<<<<<<<<<<<<<<<<<<<<
+# df_r <- sparklyr::collect(df_test5)
 # 
 ## Criar uma lista para usar o metodo lapply e
 ### inserir a coluna extraida
@@ -211,78 +212,47 @@ list_df[[1]] <- column_difference
 # 
 sparkR.session(sparkHome = "/opt/spark")
 
+# list_test <- list()
+# list_test[[1]] <- df_r
+
 spark.lapply(list_df, run_arima)
 spark.lapply(list_df, run_hw)
 
 ##############################################################
-### Metodos de previsao
+### Total
 ##############################################################
 
-## Rodar o HoltWinters
+df <- spark_read_csv(sc, "file:///home/d3jota/UFRPE/BSI/TCC/sorted.csv", header = FALSE)
 
-# sparkR.session(sparkHome = "/opt/spark")
-# 
-# column_difference <- dplyr::pull(df_test6, diferenca)
-# 
-# list_df <- list()
-# list_df[[1]] <- column_difference
-# 
-# # spark.lapply(listao, run_holtwinters)
-# 
-# # spark.lapply(list_df, run_hw)
-# spark.lapply(list_df, run_arima)
+names(df) <- c("id", "ts", "value","work_or_load","plug_id","household_id","house_id")
 
-# run_holtwinters <- function(coluna_diferenca) {
-#   ## Libs
-#   require(forecast)
-#   require(urca)
-#   require(tseries)
-#   require(MLmetrics)
-#   require(data.table)
-#   require(zoo)
-#   require(stats)
-#   
-#   #coluna_diferenca <- sdf_read_column(df, "diferenca")
-#   #coluna_diferenca <- df[, "diferenca"]
-#   #head(coluna_diferenca)
-#   #class(df)
-#   ## Substituir os NAs pela media do valor anterior e posterior
-#   #coluna_diferenca <- na.approx(coluna_diferenca)
-#   
-#   # ## Criando a timeseries
-#   dados_ts <- ts(coluna_diferenca, frequency=24)
-# 
-# 
-#   ## Verificando a estacionariedade
-#   dados_teste_estacionariedade <- summary(ur.kpss(diff(diff(dados_ts))))
-#   # dados_teste_estacionariedade
-# 
-#   # dados_ts <- diff(diff(dados_ts))
-# 
-#   ## Tratamento necessário para realizar o forecast
-#   dados_ts_na_removed <- na.remove(dados_ts)
-# 
-#   ## Dataframe de teste
-#   dados_test_hw <- tail(dados_ts_na_removed, n = 100)
-# 
-#   ## Dataframe de treino
-#   dados_train_hw <- head(dados_ts_na_removed, n = (length(dados_ts_na_removed) - 100))
-# 
-#   ajuste_holt <- HoltWinters(dados_train_hw)
-#   plot(dados_ts_na_removed, xlab = 'tempo', ylab = 'Valores Observados/Ajustados', main = '')
-#   lines(fitted(ajuste_holt)[,1], lwd = 2, col = 'red')
-#   legend(0, 20, c("Consumo", "Ajuste"), lwd = c(1, 2), col = c("black", "red"), bty = 'n')
-# 
-#   ## Previsao usando o Holt-Winters
-#   holt_forecast <- forecast(ajuste_holt, h = 100, level = 95)
-#   #plot(holt.forecast, xlab = "tempo", ylab = "Valores observados/previstos", main = "")
-# 
-#   ## Plotagem comparando o treino com o teste
-#   plot(holt_forecast, xlab = "tempo", ylab = "Valores observados/previstos", main = "")
-#   lines(dados_ts_na_removed, lwd = 2, col = 'green')
-#   legend(0, 20, c("Consumo", "Ajuste"), lwd = c(1, 2), col = c("green", "blue"), bty = 'n')
-#   print(holt_forecast)
-#   
-#   ## Calculo dos indices de erro
-#   accuracy(holt_forecast, x = dados_test_hw)
-# }
+## Filtra o consumo acumulado
+df_house_present_consumption <- df %>% filter(work_or_load == 1)
+
+## Remove a coluna de ID do CSV original
+df_house_present_consumption <- select(df_house_present_consumption, -id)
+
+## Formata o timestamp em data e hora
+df_house_present_consumption <- df_house_present_consumption %>% mutate(hora = from_unixtime(ts, 'yyyy-MM-dd HH'))
+
+## Cria uma coluna com a media do consumo de cada plug por comodo
+df_house_hourly_mean_consumption <- df_house_present_consumption %>% group_by(hora, house_id, household_id, plug_id) %>% arrange(hora, household_id, plug_id) %>% summarise(consumo = mean(value))
+
+## Soma o consumo de todos os plugs por hora
+df_house_hourly_consumption <- df_house_hourly_mean_consumption %>% group_by(hora) %>% arrange(hora) %>% summarise(total = sum(consumo))
+
+## Extrair a coluna do consumo por hora
+column_difference <- dplyr::pull(df_house_hourly_consumption, total)
+
+## Criar uma lista para usar o metodo lapply e
+### inserir a coluna extraida
+list_df <- list()
+list_df[[1]] <- column_difference
+
+sparkR.session(sparkHome = "/opt/spark")
+
+## ARIMA
+spark.lapply(list_df, run_arima)
+
+## Holt-Winters
+spark.lapply(list_df, run_hw)
