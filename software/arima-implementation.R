@@ -1,9 +1,3 @@
-# dados <- read.csv("/home/d3jota/teste/house_51/house_51.csv")
-# 
-# plot(dados$diferenca)
-# 
-# dados$diferenca <- na.approx(dados$diferenca)
-
 run_arima <- function(in_column_difference) {
   ## Libs necessarias
   require(anytime)
@@ -15,7 +9,12 @@ run_arima <- function(in_column_difference) {
   require(zoo)
   require(normtest)
   
+  # HOUSE_ID <- tail(in_column_difference, n = 1)
   FORECAST_WINDOW <- 72
+  HEADER_NAME <- "all"
+  
+  ## Remove o indice do vetor
+  # in_column_difference <- head(in_column_difference, n = (length(in_column_difference) - 1))
   
   ## Eliminar outliers
   qnt <- quantile(column_difference, probs=c(.25, .75), na.rm = T)
@@ -24,59 +23,39 @@ run_arima <- function(in_column_difference) {
   column_difference[column_difference < (qnt[1] - H)] <- caps[1]
   column_difference[column_difference > (qnt[2] + H)] <- caps[2]
   
-  # qnt <- quantile(in_column_difference, probs=c(.25, .75), na.rm = TRUE)
-  # # caps <- quantile(coluna_diferenca, probs=c(.05, .95), na.rm = T)
-  # H <- 1.5 * IQR(in_column_difference, na.rm = TRUE)
-  # column_difference <- in_column_difference
-  # column_difference[in_column_difference < (qnt[1] - H)] <- NA
-  # column_difference[in_column_difference > (qnt[2] + H)] <- NA
-  # na.approx(column_difference)
-  
   dados_ts <- ts(column_difference, frequency=24)
   
   ## Arquivo do gráfico
-  name <- paste("arima_graphs", Sys.time(), sep = "_")
-  name_pdf <- paste(name, "pdf", sep = ".")
+  name_graphs <- paste("arima_graph", HEADER_NAME, 
+                       sep = "-",
+                       collapse = " ")
+  name_pdf <- paste(name_graphs, "pdf", sep = ".")
   
   pdf(name_pdf)
   
-  # #ts.plot(dados_ts, ylab ="Consumo de energia elétrica", xlab = "dias")
-  # 
-  # # plot(decompose(dados_ts))
-  # 
-  # ## Testar a estacionariedade das partes sazonal e não sazonal
-  # ## Se a série temporal possuir uma Raiz Unitária (RU) então ela
-  # ### não é estacionária
-  # ## Teste de Dickey-Fuller aumentado (ADF)
-  # 
-  # adf_drift <- ur.df(y = diff(dados_ts), type = c("drift"), lags = 24,
-  #                    selectlags = "AIC")
-  # adf_drift
-  # ## O valor de tau2 deve ser menor que o apresentado
-  # ### em cval 5pct
-  # adf_drift@teststat
-  # adf_drift@cval
-  # acf(diff(dados_ts))
+  ## Preparando o dataframe
+  dados_ts_na_removed <- na.approx(dados_ts)
   
-  ## Estimar o modelo
-  
-  dados_ts <- na.approx(dados_ts)
+  ## Retirando a parte final do dataframe que compromete o teste
+  dados_ts_na_removed <- head(dados_ts_na_removed, n = (length(dados_ts_na_removed) - 144))
   
   ## Dividindo treino e teste
-  dados_test_hw <- tail(dados_ts, n = 2 * FORECAST_WINDOW)
-  dados_test_hw <- head(dados_test_hw, n = FORECAST_WINDOW)
+  dados_test <- tail(dados_ts_na_removed, n = FORECAST_WINDOW)
   
-  dados_train <- head(dados_ts, n = (length(dados_ts) - (2 * FORECAST_WINDOW)))
+  dados_train <- head(dados_ts_na_removed, n = (length(dados_ts_na_removed) - FORECAST_WINDOW))
   
   fit_power <- auto.arima(y = dados_train,
                           stepwise = FALSE,
                           approximation = FALSE,
                           seasonal = TRUE,
-                          trace = TRUE,
+                          trace = FALSE,
                           D = 1)
   
   order_arima <- arimaorder(fit_power)
   
+  write.table(HEADER_NAME, 
+              file = "arima_order.txt",
+              append = TRUE)
   write.table(order_arima,
               file = "arima_order.txt",
               append = TRUE)
@@ -84,46 +63,21 @@ run_arima <- function(in_column_difference) {
               file = "arima_order.txt",
               append = TRUE)
   
-  ## Box-Ljung
-  ## Teste da ausência de autocorrelação linear
-  # test_box <- Box.test(x = fit_power$residuals,
-  #                      lag = 24,
-  #                      type = "Ljung-Box",
-  #                      fitdf = 2)
-  # 
-  ## Teste para confirmar a ausência de autocorrelação
-  ### linear
-  # test_box$p.value < test_box$statistic
-  # test_box
-  
-  # ## Teste da ausência de autocorrelação da variância
-  # require(FinTS)
-  # test_arc <- ArchTest(fit_power$residuals,
-  #                      lags = 12)
-  
-  ## Teste para confirmar a ausência de autocorrelação
-  ### da variância
-  # test_arc$p.value < test_arc$statistic
-  # test_arc
-  
-  # ## Teste da normalidade
-  # test_norm <- jb.norm.test(fit_power$residuals,
-  #                           nrepl = 2000)
-  
-  ## Teste para confirmar a normalidade
-  # test_norm$p.value < test_norm$statistic
-  # test_norm
-  
   arima_forecast <- forecast(object = fit_power,
                              h = FORECAST_WINDOW,
-                             level = c(90, 95))
+                             level = 95)
   
   ## Previsão
   plot(arima_forecast, xlab = "Dias", ylab = "Valores reais/previstos (Wh)", main = "")
-  lines(dados_ts, lwd = 2, col = 'green')
-  legend("topright", c("Real", "Previsto"), lwd = c(1, 2), 
+  lines(dados_ts_na_removed, lwd = 2, col = 'green')
+  legend("bottomleft", c("Real", "Previsto"), lwd = c(1, 2), 
          col = c("green", "blue"), bty = 'o')
   
+  dev.off()
+  
+  write.table(HEADER_NAME, 
+              file = "arima_forecast.txt",
+              append = TRUE)
   write.table(arima_forecast,
               file = "arima_forecast.txt",
               append = TRUE)
@@ -134,8 +88,9 @@ run_arima <- function(in_column_difference) {
   ## Métricas
   indices <- accuracy(arima_forecast, x = dados_test)
   
-  indices_season <- accuracy(arima_forecast, x = dados_test, d = 0, D = 1)
-  
+  write.table(HEADER_NAME, 
+              file = "indices_arima.txt",
+              append = TRUE)
   write.table(indices,
               file = "indices_arima.txt",
               append = TRUE)
@@ -143,13 +98,110 @@ run_arima <- function(in_column_difference) {
               file = "indices_arima.txt",
               append = TRUE)
   
-  write.table(indices_season,
-              file = "indices_season_arima.txt",
+  
+}
+
+#####################################
+#####################################
+#####################################
+
+run_arima_df <- function(df) {
+  ## Libs necessarias
+  require(anytime)
+  require(forecast)
+  require(urca)
+  require(tseries)
+  require(MLmetrics)
+  require(data.table)
+  require(zoo)
+  require(normtest)
+  
+  FORECAST_WINDOW <- 72
+  HEADER_NAME <- paste(c("house:", df$house_id[1]), 
+                       sep = " ", 
+                       collapse = " ")
+  
+  ## Eliminar outliers
+  qnt <- quantile(df$total, probs=c(.25, .75), na.rm = TRUE)
+  caps <- quantile(df$total, probs=c(.05, .95), na.rm = TRUE)
+  H <- 1.5 * IQR(df$total, na.rm = TRUE)
+  df$total[df$total < (qnt[1] - H)] <- caps[1]
+  df$total[df$total > (qnt[2] + H)] <- caps[2]
+  coluna_diferenca <- df$total
+
+  dados_ts <- ts(coluna_diferenca, frequency=24)
+  
+  ## Arquivo do gráfico
+  name_graphs <- paste("arima_graph", df$house_id[1], 
+                       sep = "-",
+                       collapse = " ")
+  name_pdf <- paste(name_graphs, "pdf", sep = ".")
+  
+  pdf(name_pdf)
+  
+  ## Preparando o dataframe
+  dados_ts_na_removed <- na.approx(dados_ts)
+  
+  ## Retirando a parte final do dataframe que compromete o teste
+  dados_ts_na_removed <- head(dados_ts_na_removed, n = (length(dados_ts_na_removed) - 144))
+  
+  ## Dividindo treino e teste
+  dados_test <- tail(dados_ts_na_removed, n = FORECAST_WINDOW)
+  
+  dados_train <- head(dados_ts_na_removed, n = (length(dados_ts_na_removed) - FORECAST_WINDOW))
+  
+  fit_power <- auto.arima(y = dados_train,
+                          stepwise = FALSE,
+                          approximation = FALSE,
+                          seasonal = TRUE,
+                          trace = FALSE,
+                          D = 1)
+  
+  order_arima <- arimaorder(fit_power)
+  
+  write.table(HEADER_NAME, 
+              file = "arima_order.txt",
+              append = TRUE)
+  write.table(order_arima,
+              file = "arima_order.txt",
               append = TRUE)
   write.table("======",
-              file = "indices_season_arima.txt",
+              file = "arima_order.txt",
               append = TRUE)
   
+  arima_forecast <- forecast(object = fit_power,
+                             h = FORECAST_WINDOW,
+                             level = c(90, 95))
+  
+  ## Previsão
+  plot(arima_forecast, xlab = "Dias", ylab = "Valores reais/previstos (Wh)", main = "")
+  lines(dados_ts_na_removed, lwd = 2, col = 'green')
+  legend("bottomleft", c("Real", "Previsto"), lwd = c(1, 2), 
+         col = c("green", "blue"), bty = 'o')
+  
   dev.off()
+  
+  write.table(HEADER_NAME, 
+              file = "arima_forecast.txt",
+              append = TRUE)
+  write.table(arima_forecast,
+              file = "arima_forecast.txt",
+              append = TRUE)
+  write.table("======",
+              file = "arima_forecast.txt",
+              append = TRUE)
+  
+  ## Métricas
+  indices <- accuracy(arima_forecast, x = dados_test)
+  
+  write.table(HEADER_NAME, 
+              file = "indices_arima.txt",
+              append = TRUE)
+  write.table(indices,
+              file = "indices_arima.txt",
+              append = TRUE)
+  write.table("======",
+              file = "indices_arima.txt",
+              append = TRUE)
   
 }
