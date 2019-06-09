@@ -68,7 +68,10 @@ run_arima <- function(in_column_difference) {
                              level = 95)
   
   ## Previsão
-  plot(arima_forecast, xlab = "Dias", ylab = "Valores reais/previstos (Wh)", main = "")
+  plot(arima_forecast, xlab = "Dias", 
+       ylab = "Valores reais/previstos (Wh)", 
+       main = "",
+       ylim = c(-20000, 20000))
   lines(dados_ts_na_removed, lwd = 2, col = 'green')
   legend("bottomleft", c("Real", "Previsto"), lwd = c(1, 2), 
          col = c("green", "blue"), bty = 'o')

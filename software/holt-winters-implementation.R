@@ -24,7 +24,7 @@ run_hw <- function(in_coluna_diferenca) {
   coluna_diferenca[in_coluna_diferenca > (qnt[2] + H)] <- caps[2]
   
   ## Criando o objeto timeseries
-  dados_ts <- ts(coluna_diferenca, frequency=24*7)
+  dados_ts <- ts(coluna_diferenca, frequency=24)
   
   ## Arquivo do gráfico
   name_graphs <- paste("hw_graph", HEADER_NAME, 
@@ -99,7 +99,10 @@ run_hw <- function(in_coluna_diferenca) {
               append = TRUE)
   
   ## Plotagem comparando o treino com o teste
-  plot(holt_forecast, xlab = "Dias", ylab = "Valores reais/previstos (Wh)", main = "")
+  plot(holt_forecast, xlab = "Dias", 
+       ylab = "Valores reais/previstos (Wh)", 
+       main = "",
+       ylim = c(-20000, 20000))
   lines(dados_ts_na_removed, lwd = 2, col = 'green')
   legend("bottomleft", c("Real", "Previsto"), lwd = c(1, 2), 
          col = c("green", "blue"), bty = 'o')

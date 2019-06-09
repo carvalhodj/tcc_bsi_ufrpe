@@ -1,0 +1,5 @@
+
+	KPSS Test for Level Stationarity
+
+data:  ts(df_r_all)
+KPSS Level = 0.1787, Truncation lag parameter = 6, p-value = 0.1 
