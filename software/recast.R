@@ -53,7 +53,7 @@ start_time_calculo_consumo_por_casa
 ## Inicia o SparkR
 sparkR.session(sparkHome = "/opt/spark")
 
-for (house in 28:39) {
+for (house in 0:39) {
   df_house <- filter(df, house_id == house)
 
   ## Filtra o consumo acumulado

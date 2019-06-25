@@ -140,9 +140,15 @@ run_hw_df <- function(df) {
   setwd("/home/d3jota/UFRPE/BSI/TCC/")
   
   FORECAST_WINDOW <- 72
+  
+  ## HEADER_NAME PARA O CENÁRIO DE PREVISÃO
+  ## POR RESIDÊNCIA
   HEADER_NAME <- paste(c("house:", df$house_id[1]), 
-                           sep = " ", 
-                           collapse = " ")
+                       sep = " ", 
+                       collapse = " ")
+  
+  ## CASO SEJA O CONSUMO DA REGIÃO
+  ## HEADER_NAME <- "all"
   
   ## Eliminar outliers
   qnt <- quantile(df$total, probs=c(.25, .75), na.rm = TRUE)

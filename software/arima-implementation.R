@@ -120,9 +120,15 @@ run_arima_df <- function(df) {
   require(normtest)
   
   FORECAST_WINDOW <- 72
+ 
+  ## HEADER_NAME PARA O CENÁRIO DE PREVISÃO
+  ## POR RESIDÊNCIA
   HEADER_NAME <- paste(c("house:", df$house_id[1]), 
                        sep = " ", 
                        collapse = " ")
+  
+  ## CASO SEJA O CONSUMO DA REGIÃO
+  ## HEADER_NAME <- "all"
   
   ## Eliminar outliers
   qnt <- quantile(df$total, probs=c(.25, .75), na.rm = TRUE)
