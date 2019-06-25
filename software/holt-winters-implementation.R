@@ -86,7 +86,7 @@ run_hw <- function(in_coluna_diferenca) {
   legend("topright", c("Consumo", "Ajuste"), lwd = c(1, 2), col = c("black", "red"), bty = 'o')
   
   ## Previsao usando o Holt-Winters
-  holt_forecast <- forecast(ajuste_holt, h = FORECAST_WINDOW, level = 95)
+  holt_forecast <- forecast(ajuste_holt, h = FORECAST_WINDOW, level = 95, lambda = T)
   
   write.table(HEADER_NAME, 
               file = "holt_forecast.txt",
