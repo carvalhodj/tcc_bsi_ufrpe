@@ -3,3 +3,19 @@
 
 data:  ts(df_r_all)
 KPSS Level = 0.1787, Truncation lag parameter = 6, p-value = 0.1 
+
+####################################### 
+# KPSS Unit Root / Cointegration Test # 
+####################################### 
+
+The value of the test statistic is: 0.1787 
+
+	KPSS Test for Level Stationarity
+
+data:  ts(df_r_all)
+KPSS Level = 0.1787, Truncation lag parameter = 6, p-value = 0.1
+
+	KPSS Test for Trend Stationarity
+
+data:  ts(df_r_all)
+KPSS Trend = 0.1397, Truncation lag parameter = 6, p-value = 0.06166

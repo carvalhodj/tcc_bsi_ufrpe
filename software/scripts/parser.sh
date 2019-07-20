@@ -6,4 +6,6 @@
 # 2 = arquivo csv
 # 3 = arquivo destino
 
-head -n $1 $2 | grep 1,0,1,0$ | cut -d "," -f 2,3,4,5,6,7 > $3
+cat $1 | grep ,0$ > $2
+#head -n $1 $2 | grep 1,0,1,0$ | cut -d "," -f 2,3,4,5,6,7 > $3
+#cat $1 | grep 1,0,1,0$ > $2

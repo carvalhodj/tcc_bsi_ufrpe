@@ -1,0 +1,7 @@
+LEITURA
+
+3,925087 horas
+
+PROCESSAMENTO
+
+1,365937 horas

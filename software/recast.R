@@ -47,45 +47,42 @@ end_time - start_time
 ### Filtragem por residencia e calculo do consumo horario
 ##################################################################
 
-start_time_calculo_consumo_por_casa <- Sys.time()
-start_time_calculo_consumo_por_casa
+# start_time_calculo_consumo_por_casa <- Sys.time()
+# start_time_calculo_consumo_por_casa
 
-## Inicia o SparkR
-sparkR.session(sparkHome = "/opt/spark")
-
-for (house in 0:39) {
-  df_house <- filter(df, house_id == house)
-
-  ## Filtra o consumo acumulado
-  df_house_present_consumption <- df_house %>% filter(work_or_load == 1)
-
-  ## Remove a coluna de ID do CSV original
-  df_house_present_consumption <- select(df_house_present_consumption, -id)
-
-  ## Formata o timestamp em data e hora
-  df_house_present_consumption <- df_house_present_consumption %>% mutate(hora = from_unixtime(ts, 'yyyy-MM-dd HH'))
-
-  ## Cria uma coluna com a media do consumo de cada plug por comodo
-  df_house_hourly_mean_consumption <- df_house_present_consumption %>% group_by(hora, house_id, household_id, plug_id) %>% arrange(hora, household_id, plug_id) %>% summarise(consumo = mean(value))
-
-  ## Soma o consumo de todos os plugs por hora
-  df_house_hourly_consumption <- df_house_hourly_mean_consumption %>% group_by(hora, house_id) %>% arrange(hora) %>% summarise(total = sum(consumo))
-
-  ##################################################################
-  ### Aplicacao dos metodos de previsao e indices de acuracia
-  ##################################################################
-
-  ## Coletar o dataframe inteiro
-  df_r <- sparklyr::collect(df_house_hourly_consumption)
-
-  ## Cria a lista para adicionar os dataframes
-  list_df <- list()
-  list_df[[1]] <- df_r
-
-  ## Aplica os métodos
-  spark.lapply(list_df, run_arima_df)
-  spark.lapply(list_df, run_hw_df)
-}
+# for (house in 0:39) {
+#   df_house <- filter(df, house_id == house)
+# 
+#   ## Filtra o consumo acumulado
+#   df_house_present_consumption <- df_house %>% filter(work_or_load == 1)
+# 
+#   ## Remove a coluna de ID do CSV original
+#   df_house_present_consumption <- select(df_house_present_consumption, -id)
+# 
+#   ## Formata o timestamp em data e hora
+#   df_house_present_consumption <- df_house_present_consumption %>% mutate(hora = from_unixtime(ts, 'yyyy-MM-dd HH'))
+# 
+#   ## Cria uma coluna com a media do consumo de cada plug por comodo
+#   df_house_hourly_mean_consumption <- df_house_present_consumption %>% group_by(hora, house_id, household_id, plug_id) %>% arrange(hora, household_id, plug_id) %>% summarise(consumo = mean(value))
+# 
+#   ## Soma o consumo de todos os plugs por hora
+#   df_house_hourly_consumption <- df_house_hourly_mean_consumption %>% group_by(hora, house_id) %>% arrange(hora) %>% summarise(total = sum(consumo))
+# 
+#   ##################################################################
+#   ### Aplicacao dos metodos de previsao e indices de acuracia
+#   ##################################################################
+# 
+#   ## Coletar o dataframe inteiro
+#   df_r <- sparklyr::collect(df_house_hourly_consumption)
+# 
+#   ## Cria a lista para adicionar os dataframes
+#   list_df <- list()
+#   list_df[[1]] <- df_r
+# 
+#   ## Aplica os métodos
+#   spark.lapply(list_df, run_arima_df)
+#   spark.lapply(list_df, run_hw_df)
+# }
 # 
 # end_time_calculo_consumo_por_casa <- Sys.time()
 # end_time_calculo_consumo_por_casa
@@ -119,26 +116,26 @@ df_all_hourly_consumption <- df_all_hourly_mean_consumption %>% group_by(hora) %
 df_r_all <- pull(df_all_hourly_consumption, total)
 
 ## Cria a lista para adicionar os dataframes
-# list_df_all <- list()
-# list_df_all[[1]] <- df_r_all
+list_df_all <- list()
+list_df_all[[1]] <- df_r_all
 
 ## Inicia o SparkR
-# sparkR.session(sparkHome = "/opt/spark")
+sparkR.session(sparkHome = "/opt/spark")
 
 ## Aplica os métodos
-# spark.lapply(list_df_all, run_arima)
-# spark.lapply(list_df_all, run_hw)
+spark.lapply(list_df_all, run_arima)
+spark.lapply(list_df_all, run_hw)
 
 # Teste de estacionariedade
-# stationarity_test <- kpss.test(ts(df_r_all))
-stationarity_test_1 <- ur.kpss(ts(df_r_all), type = "tal", lags = "short")
-stationarity_test_2 <- ur.kpss(ts(df_r_all), type = "mu", lags = "short")
+stationarity_test <- kpss.test(ts(df_r_all))
+# stationarity_test_1 <- ur.kpss(ts(df_r_all), type = "tal", lags = "short")
+# stationarity_test_2 <- ur.kpss(ts(df_r_all), type = "mu", lags = "short")
 
-stationarity_test_1
-stationarity_test_2
+# stationarity_test_1
+# stationarity_test_2
 
-base::summary(stationarity_test_1)
-base::summary(stationarity_test_2)
+# base::summary(stationarity_test_1)
+# base::summary(stationarity_test_2)
 
 end_time_calculo_consumo_all <- Sys.time()
 end_time_calculo_consumo_all

@@ -9,6 +9,8 @@ run_arima <- function(in_column_difference) {
   require(zoo)
   require(normtest)
   
+  setwd("/home/d3jota/UFRPE/BSI/TCC/pos/")
+  
   # HOUSE_ID <- tail(in_column_difference, n = 1)
   FORECAST_WINDOW <- 72
   HEADER_NAME <- "all"

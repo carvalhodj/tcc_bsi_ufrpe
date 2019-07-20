@@ -2,3 +2,4 @@
 DEBS/
 .venv/
 .vscode/
+software/csv_files/metastore_db/

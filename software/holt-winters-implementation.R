@@ -137,7 +137,7 @@ run_hw_df <- function(df) {
   require(zoo)
   require(stats)
   
-  setwd("/home/d3jota/UFRPE/BSI/TCC/")
+  setwd("/home/d3jota/UFRPE/BSI/TCC/pos/")
   
   FORECAST_WINDOW <- 72
   

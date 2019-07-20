@@ -21,7 +21,7 @@ setwd("/home/d3jota/UFRPE/BSI/TCC/tcc_bsi_ufrpe/software/csv_files/")
 # agregado = aggregate(V2 ~ Datetime2, data=dados, FUN=function(x) x[length(x)]-x[1]) # https://blogs.ubc.ca/yiwang28/2017/05/04/my-r-learning-notes-quick-ways-to-aggregate-minutely-data-into-hourly-data/
 # write.csv(agregado, "debs_consumo_agregado.csv")
 ## TERCEIRA PARTE
-dados <- read.csv("filtered0010-consumo_agregado.csv")
+dados <- read.csv("/home/d3jota/teste/house_5/house_5.csv")
 
 ## Remover outliers
 outlierReplace = function(dataframe, cols, rows, newValue = NA) {
